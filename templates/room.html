@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/room.css') }}">
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/room.js') }}" defer></script>
+</head>
+<body>
+    <div class="room-container">
+        <div class="message-box">
+            <h2>Room: {{ room_code }}</h2>
+            <div class="messages" id="messages"></div>
+            <div class="inputs">
+                <input type="text" rows="3" placeholder="message" name="message" id="message"/>
+                <button type="button" name="send" id="send_btn" onclick="sendMessage()">
+                    Send
+                </button>
+            </div>
+        </div>
+        
+        <div class="detector-panel">
+            <h3>🤟 Sign Language Detection</h3>
+            <div id="status" class="status disconnected">Connecting...</div>
+            
+            <div class="video-container">
+                <video id="videoElement" autoplay muted></video>
+                <canvas id="canvas"></canvas>
+            </div>
+            
+            <div class="detector-controls">
+                <button id="startBtn" class="btn">Start Camera</button>
+                <button id="stopBtn" class="btn danger" disabled>Stop Camera</button>
+                <button id="toggleProcessing" class="btn" disabled>Start Detection</button>
+            </div>
+            
+            <div class="detection-results">
+                <div class="result-item">
+                    <strong>Detected:</strong> <span id="prediction">No gesture</span>
+                </div>
+                <div class="result-item">
+                    <strong>Confidence:</strong> <span id="confidence">0%</span>
+                </div>
+                <div class="confidence-bar">
+                    <div id="confidenceBar" class="confidence-fill" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const createmessage = (name, msg, type = 'normal') => {
+            const messageClass = type === 'sign_detection' ? 'sign-message' : 'text';
+            const content = `
+            <div class="${messageClass}">
+                <span>
+                    <strong>${name}</strong>: ${msg}
+                </span>
+                <span class="muted">
+                    ${new Date().toLocaleString()}
+                </span>
+            </div>
+            `
+            messages.innerHTML += content;
+            messages.scrollTop = messages.scrollHeight;
+        };  
+    </script>
+    {% for msg in messages %}
+        <script type="text/javascript">
+            createmessage("{{msg.name}}", "{{msg.message}}", "{{msg.type if msg.type else 'normal'}}");
+        </script>
+    {% endfor %}
+</body>
+</html>

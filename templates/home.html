@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+    <script src="{{ url_for('static', filename='js/home.js') }}" defer></script>
+</head>
+<body>
+    <div class="user-avatar">{{ user.username }}</div>
+    <button class="btn" onclick="mainbtn()"> go to main app </button>
+
+    <form method="post" class="buttons">
+        <div class="join">
+            <input type="text" placeholder="Room Code" name="code" value="{{ code }}"/>
+            <button type="submit" name="join"> Join a room </button>
+        </div>
+        <button type="submit" name="create"> Create a room </button>
+        {% if error %}
+            <ul>
+                <li>{{error}}</li>
+            </ul>
+        {% endif %}
+    </form>
+</body>
+</html>

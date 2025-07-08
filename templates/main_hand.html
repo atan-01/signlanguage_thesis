@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Language Detection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main_hand.css') }}">
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js" defer></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤟 Sign Language Detection</h1>
+            <div id="status" class="status disconnected">Connecting...</div>
+        </div>
+
+        <!-- User Info Panel -->
+        {% if user %}
+        <div class="user-info">
+            <div class="user-welcome">
+                <div class="user-avatar">{{ user.username[0].upper() }}</div>   <!-- user from python (user=user_data)-->
+                <div>
+                    <div style="font-size: 1.1rem;">Welcome back, <strong>{{ user.username }}</strong>!</div>
+                    <div style="font-size: 0.9rem; opacity: 0.8;">Ready to practice sign language?</div>
+                </div>
+            </div>
+            
+            <div class="user-stats">
+                <div class="stat-item">
+                    <div class="stat-value">{{ user.total_score }}</div>
+                    <div class="stat-label">Total Score</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ user.games_played }}</div>
+                    <div class="stat-label">Games Played</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ user.best_streak }}</div>
+                    <div class="stat-label">Best Streak</div>
+                </div>
+            </div>
+
+            <a href="{{ url_for('auth.logout') }}" class="logout-btn">Logout</a>
+        </div>
+        {% endif %}
+
+        <div class="video-container">
+            <video id="videoElement" autoplay muted></video>
+            <canvas id="canvas"></canvas>
+            <div id="fpsCounter" class="fps-counter">FPS: 0</div>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn" class="btn">Start Camera</button>
+            <button id="stopBtn" class="btn danger" disabled>Stop Camera</button>
+            <button id="toggleProcessing" class="btn" disabled>Start Detection</button>
+        </div>
+
+        <div class="results">
+            <div class="result-card">
+                <h3>Detected Gesture</h3>
+                <div id="prediction" class="result-value">No gesture</div>
+            </div>
+            <div class="result-card">
+                <h3>Confidence</h3>
+                <div id="confidence" class="result-value">0%</div>
+                <div class="confidence-bar">
+                    <div id="confidenceBar" class="confidence-fill" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>Instructions:</h3>
+            <ul>
+                <li>Click "Start Camera" to access your webcam</li>
+                <li>Click "Start Detection" to begin sign language recognition</li>
+                <li>Show your hand gestures to the camera</li>
+                <li>The system will detect and classify your signs in real-time</li>
+                <li>Make sure your hands are well-lit and clearly visible</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

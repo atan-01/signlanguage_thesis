@@ -1,0 +1,243 @@
+.room-container {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    height: 100vh;
+    box-sizing: border-box;
+}
+
+.message-box {
+    border-color: black;
+    border-width: 2px;
+    border-style: solid;
+    border-radius: 10px;
+    background-color: antiquewhite;
+    height: 80vh;
+    display: flex;
+    flex-direction: column;
+    width: 50vw;
+    align-items: stretch;
+}
+
+.messages {
+    overflow-y: scroll;
+    flex: 1;
+    width: 100%;
+    padding: 10px;
+}
+
+.inputs {
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+h2 {
+    text-align: center;
+    margin: 10px 0;
+}
+
+#message {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+#send_btn {
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#send_btn:hover {
+    background-color: #45a049;
+}
+
+.text {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 10px;
+    margin-bottom: 5px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+}
+
+.sign-message {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 10px;
+    margin-bottom: 5px;
+    background-color: #e8f5e8;
+    border-radius: 5px;
+    border-left: 4px solid #4CAF50;
+}
+
+.muted {
+    font-size: 10px;
+    color: darkgray;
+}
+
+/* Detector Panel Styles */
+.detector-panel {
+    border: 2px solid #333;
+    border-radius: 10px;
+    background-color: #f0f0f0;
+    padding: 20px;
+    width: 45vw;
+    height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.detector-panel h3 {
+    text-align: center;
+    margin: 0 0 15px 0;
+    color: #333;
+}
+
+.status {
+    padding: 10px;
+    border-radius: 5px;
+    text-align: center;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.status.connected {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status.disconnected {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.video-container {
+    position: relative;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #000;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+#videoElement {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+
+#canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.detector-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.btn:not(:disabled):hover {
+    opacity: 0.8;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn:nth-child(1) {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.btn.danger {
+    background-color: #f44336;
+    color: white;
+}
+
+.btn:nth-child(3) {
+    background-color: #2196F3;
+    color: white;
+}
+
+.btn.processing {
+    background-color: #ff9800;
+    color: white;
+}
+
+.detection-results {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px;
+    background-color: white;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+.confidence-bar {
+    width: 100%;
+    height: 20px;
+    background-color: #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff4444, #ffaa00, #44ff44);
+    transition: width 0.3s ease;
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+    .room-container {
+        flex-direction: column;
+        height: auto;
+    }
+    
+    .message-box, .detector-panel {
+        width: 100%;
+        height: auto;
+        min-height: 400px;
+    }
+    
+    .detector-panel {
+        height: 500px;
+    }
+}

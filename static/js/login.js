@@ -1,0 +1,134 @@
+function switchTab(tab) {
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const tabs = document.querySelectorAll('.tab-btn');
+
+    tabs.forEach(t => t.classList.remove('active')); // remove active to both buttons
+
+    if (tab === 'login') {
+        loginForm.classList.add('active');
+        registerForm.classList.remove('active');
+        tabs[0].classList.add('active');
+    } else {
+        loginForm.classList.remove('active');
+        registerForm.classList.add('active');
+        tabs[1].classList.add('active');
+    }
+
+    clearMessages();
+}
+
+function showError(message) {
+    const errorDiv = document.getElementById('errorMessage');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    document.getElementById('successMessage').style.display = 'none';
+}
+
+function showSuccess(message) {
+    const successDiv = document.getElementById('successMessage');
+    successDiv.textContent = message;
+    successDiv.style.display = 'block';
+    document.getElementById('errorMessage').style.display = 'none';
+}
+
+function clearMessages() {
+    document.getElementById('errorMessage').style.display = 'none';
+    document.getElementById('successMessage').style.display = 'none';
+}
+
+function setLoading(loading) {
+    const container = document.querySelector('.auth-container');
+    if (loading) {
+        container.classList.add('loading');
+    } else {
+        container.classList.remove('loading');
+    }
+}
+
+// Login form handler
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();          // stops reloading on submit
+    setLoading(true);
+    clearMessages();
+
+    const formData = new FormData(this);
+    const data = {
+        username: formData.get('username'), // username = name
+        password: formData.get('password')
+    };
+
+    try {
+        const response = await fetch('/login', {        // uses ajax - submits form without refreshing, /login route in app.py
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)  // turns data object into json
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {                                      //  Checks if the HTTP response was successful (status 200–299).
+            showSuccess('Login successful! Redirecting...');
+            setTimeout(() => {
+                window.location.href = result.redirect;
+            }, 1000);
+        } else {
+            showError(result.error || 'Login failed');
+        }
+    } catch (error) {
+        showError('Network error. Please try again.');
+    } finally {
+        setLoading(false);
+    }
+});
+
+// Register form handler
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    setLoading(true);
+    clearMessages();
+
+    const formData = new FormData(this);
+    const password = formData.get('password');
+    const confirmPassword = formData.get('confirmPassword');
+
+    if (password !== confirmPassword) {
+        showError('Passwords do not match');
+        setLoading(false);
+        return;
+    }
+
+    const data = {
+        username: formData.get('username'),
+        email: formData.get('email'),
+        password: password,
+        role: formData.get('role')
+    };
+
+    try {
+        const response = await fetch('/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showSuccess('Registration successful! Redirecting...');
+            setTimeout(() => {
+                window.location.href = result.redirect;
+            }, 1000);
+        } else {
+            showError(result.error || 'Registration failed');
+        }
+    } catch (error) {
+        showError('Network error. Please try again.');
+    } finally {
+        setLoading(false);
+    }
+});
