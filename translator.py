@@ -21,6 +21,7 @@ class WebSignLanguageDetector:
         
         self.load_model()
         
+        #mediapipe components
         self.mp_hands = mp.solutions.hands
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_drawing_styles = mp.solutions.drawing_styles
@@ -32,8 +33,8 @@ class WebSignLanguageDetector:
             min_tracking_confidence=0.5
         )
         
-        self.prediction_window = deque(maxlen=10)
-        self.confidence_window = deque(maxlen=10)
+        self.prediction_window = deque(maxlen=5) #10
+        self.confidence_window = deque(maxlen=5) #10
         
         self.stable_prediction = "No gesture"
         self.detection_confidence = 0.0

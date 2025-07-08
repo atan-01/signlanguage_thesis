@@ -13,11 +13,24 @@ const statusDiv = document.getElementById('status');
 const predictionDiv = document.getElementById('prediction');
 const confidenceDiv = document.getElementById('confidence');
 const confidenceBar = document.getElementById('confidenceBar');
-
 // State variables for detector
 let stream = null;
 let isProcessing = false;
 let processingInterval = null;
+
+const customClassNames = {
+  '0': 'A', '1': 'B', '2': 'C', '3': 'D', '4': 'E', '5': 'F',
+  '6': 'G', '7': 'H', '8': 'I', '9': 'K', '10': 'L', '11': 'M',
+  '12': 'N', '13': 'O', '14': 'P', '15': 'Q', '16': 'R', '17': 'T',
+  '18': 'U', '19': 'V', '20': 'W', '21': 'X', '22': 'Y', '23': 'ILY'
+};
+
+const asl_classes = Object.values(customClassNames);
+let targetletter = asl_classes[Math.floor(Math.random() * asl_classes.length)]; //math.random*asl_classes.length = decimal between 0 and 23.99(24 class), math.floor= rounds number to nearest whole num, 
+let score = 0;
+document.getElementById('score').textContent = `Score: ${score}`;
+document.getElementById('target-letter').textContent = `Target: ${targetletter}`;
+
 
 // Socket event handlers for chat
 socketio.on('message', (data) => {
@@ -47,6 +60,26 @@ socketio.on('prediction_result', function(data) {
     if (data.landmarks && data.landmarks.length > 0) {
         drawLandmarks(data.landmarks);
     }
+
+    if (data.prediction === targetletter && confidencePercent >= 50) {
+        holdCounter += 1;
+    } else {
+        holdCounter = 0; // Reset if prediction breaks
+    }
+
+    // If held for 4 frames (~1 second at 10 FPS)
+    if (holdCounter >= 4) {
+        score += 1;
+        holdCounter = 0; // Reset for next target
+
+        // Choose a new target
+        targetletter = asl_classes[Math.floor(Math.random() * asl_classes.length)];
+
+        // Update UI
+        document.getElementById('score').textContent = `Score: ${score}`;
+        document.getElementById('target-letter').textContent = `Target: ${targetletter}`;
+    }
+
 });
 
 socketio.on('error', function(data) {
@@ -135,7 +168,7 @@ function startProcessing() {
     // Send frames to server for processing
     processingInterval = setInterval(() => {
         captureAndSendFrame();
-    }, 100); // Send frame every 100ms (10 FPS)
+    }, 300); // Send frame every 300ms (3.33 FPS)
 
     console.log('Processing started');
 }

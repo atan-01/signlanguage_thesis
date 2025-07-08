@@ -96,7 +96,6 @@ def init_socketio(socketio, supabase, detector=None):
             emit('error', {'message': 'Room not found or detector not available'})
             return
             
-        print(f"Received frame for processing in room {room}")
         try:
             image_data = data['image'].split(',')[1]
             image_bytes = base64.b64decode(image_data)

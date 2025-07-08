@@ -26,7 +26,7 @@
             <div id="status" class="status disconnected">Connecting...</div>
             
             <div class="video-container">
-                <video id="videoElement" autoplay muted></video>
+                <video id="videoElement" autoplay muted></video>  <!-- autoplay = play as soon as its ready-->
                 <canvas id="canvas"></canvas>
             </div>
             
@@ -49,7 +49,8 @@
             </div>
         </div>
     </div>
-    
+    <div id="target-letter"></div>
+    <div id="score"></div>
     <script>
         const createmessage = (name, msg, type = 'normal') => {
             const messageClass = type === 'sign_detection' ? 'sign-message' : 'text';
@@ -67,7 +68,7 @@
             messages.scrollTop = messages.scrollHeight;
         };  
     </script>
-    {% for msg in messages %}
+    {% for msg in messages %} <!-- called jinja loop -->
         <script type="text/javascript">
             createmessage("{{msg.name}}", "{{msg.message}}", "{{msg.type if msg.type else 'normal'}}");
         </script>
