@@ -6,7 +6,6 @@
     <title>Room</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/room.css') }}">
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
-    <script src="{{ url_for('static', filename='js/room.js') }}" defer></script>
 </head>
 <body>
     <div class="room-container">
@@ -26,7 +25,7 @@
             <div id="status" class="status disconnected">Connecting...</div>
             
             <div class="video-container">
-                <video id="videoElement" autoplay muted></video>  <!-- autoplay = play as soon as its ready-->
+                <video id="videoElement" autoplay muted></video>
                 <canvas id="canvas"></canvas>
             </div>
             
@@ -51,11 +50,26 @@
     </div>
     <div id="target-letter"></div>
     <div id="score"></div>
+    <div id="created">Created: {{ created }}</div>
+    
+    <!-- Game controls - only show for room creator -->
+    {% if created %}
+        <button type="button" id="startgameBtn">Start Game</button>
+    {% endif %}
+    
+    <!-- Camera status display for all users -->
+    <div id="camera-status">
+        <h4>Camera Status:</h4>
+        <div id="camera-list"></div>
+    </div>
+
     <script>
+        // Set room creator status BEFORE loading room.js
+        window.isRoomCreator = {{ created|tojson }};
+        
         const createmessage = (name, msg, type = 'normal') => {
-            const messageClass = type === 'sign_detection' ? 'sign-message' : 'text';
             const content = `
-            <div class="${messageClass}">
+            <div class="text">
                 <span>
                     <strong>${name}</strong>: ${msg}
                 </span>
@@ -63,12 +77,34 @@
                     ${new Date().toLocaleString()}
                 </span>
             </div>
-            `
+            `;
             messages.innerHTML += content;
             messages.scrollTop = messages.scrollHeight;
-        };  
+        };
+        
+        // Function to update camera status display
+        function updateCameraStatusDisplay(data) {
+            const cameraList = document.getElementById('camera-list');
+            cameraList.innerHTML = '';
+            
+            for (const [userId, status] of Object.entries(data.users)) {
+                const statusDiv = document.createElement('div');
+                statusDiv.className = 'camera-user-status';
+                statusDiv.innerHTML = `
+                    <span>${status.username}</span>: 
+                    <span class="${status.camera_ready ? 'ready' : 'not-ready'}">
+                        ${status.camera_ready ? '📹 Ready' : '❌ Not Ready'}
+                    </span>
+                `;
+                cameraList.appendChild(statusDiv);
+            }
+        }
     </script>
-    {% for msg in messages %} <!-- called jinja loop -->
+    
+    <!-- Load room.js AFTER setting window.isRoomCreator -->
+    <script src="{{ url_for('static', filename='js/room.js') }}" defer></script>
+    
+    {% for msg in messages %}
         <script type="text/javascript">
             createmessage("{{msg.name}}", "{{msg.message}}", "{{msg.type if msg.type else 'normal'}}");
         </script>

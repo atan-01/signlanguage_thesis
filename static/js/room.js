@@ -13,10 +13,14 @@ const statusDiv = document.getElementById('status');
 const predictionDiv = document.getElementById('prediction');
 const confidenceDiv = document.getElementById('confidence');
 const confidenceBar = document.getElementById('confidenceBar');
+const startGameButton = document.getElementById('startgameBtn');
+
 // State variables for detector
 let stream = null;
 let isProcessing = false;
 let processingInterval = null;
+let isCameraReady = false;
+let holdCounter = 0;
 
 const customClassNames = {
   '0': 'A', '1': 'B', '2': 'C', '3': 'D', '4': 'E', '5': 'F',
@@ -26,11 +30,10 @@ const customClassNames = {
 };
 
 const asl_classes = Object.values(customClassNames);
-let targetletter = asl_classes[Math.floor(Math.random() * asl_classes.length)]; //math.random*asl_classes.length = decimal between 0 and 23.99(24 class), math.floor= rounds number to nearest whole num, 
+let targetletter = asl_classes[Math.floor(Math.random() * asl_classes.length)];
 let score = 0;
 document.getElementById('score').textContent = `Score: ${score}`;
 document.getElementById('target-letter').textContent = `Target: ${targetletter}`;
-
 
 // Socket event handlers for chat
 socketio.on('message', (data) => {
@@ -64,22 +67,16 @@ socketio.on('prediction_result', function(data) {
     if (data.prediction === targetletter && confidencePercent >= 50) {
         holdCounter += 1;
     } else {
-        holdCounter = 0; // Reset if prediction breaks
+        holdCounter = 0;
     }
 
-    // If held for 4 frames (~1 second at 10 FPS)
     if (holdCounter >= 4) {
         score += 1;
-        holdCounter = 0; // Reset for next target
-
-        // Choose a new target
+        holdCounter = 0;
         targetletter = asl_classes[Math.floor(Math.random() * asl_classes.length)];
-
-        // Update UI
         document.getElementById('score').textContent = `Score: ${score}`;
         document.getElementById('target-letter').textContent = `Target: ${targetletter}`;
     }
-
 });
 
 socketio.on('error', function(data) {
@@ -93,6 +90,33 @@ socketio.on('disconnect', function() {
     statusDiv.className = 'status disconnected';
 });
 
+// New socket events for camera readiness
+socketio.on('camera_status_update', function(data) {
+    updateCameraStatusDisplay(data);
+});
+
+socketio.on('all_cameras_ready', function() {
+    // Only enable start game button for room creator
+    if (window.isRoomCreator) {
+        startGameButton.disabled = false;
+        startGameButton.textContent = 'Start Game (All Ready!)';
+        startGameButton.style.backgroundColor = '#4CAF50';
+    }
+});
+
+socketio.on('waiting_for_cameras', function(data) {
+    // Only update start game button for room creator
+    if (window.isRoomCreator) {
+        startGameButton.disabled = true;
+        startGameButton.textContent = `Waiting for cameras (${data.ready}/${data.total})`;
+        startGameButton.style.backgroundColor = '#FFA500';
+    }
+});
+
+socketio.on('start_game_signal', function () {
+    startProcessing();
+});
+
 // Chat functions
 const sendMessage = () => {
     const message = document.getElementById("message");
@@ -101,7 +125,6 @@ const sendMessage = () => {
     message.value = "";
 };
 
-// Add enter key support for sending messages
 document.getElementById("message").addEventListener("keypress", function(event) {
     if (event.key === "Enter") {
         sendMessage();
@@ -123,6 +146,10 @@ async function startCamera() {
         videoElement.onloadedmetadata = function() {
             canvas.width = videoElement.videoWidth;
             canvas.height = videoElement.videoHeight;
+            isCameraReady = true;
+            
+            // Notify server that camera is ready
+            socketio.emit('camera_ready');
         };
 
         startBtn.disabled = true;
@@ -144,16 +171,23 @@ function stopCamera() {
 
     videoElement.srcObject = null;
     stopProcessing();
+    isCameraReady = false;
 
     startBtn.disabled = false;
     stopBtn.disabled = true;
     toggleProcessingBtn.disabled = true;
 
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Notify server that camera is stopped
+    socketio.emit('camera_stopped');
 
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     console.log('Camera stopped');
 }
+
+// Updated start game button handler - only for room creators
+startGameButton.addEventListener('click', function () {
+    socketio.emit('start_game');
+});
 
 function startProcessing() {
     if (!stream) {
@@ -165,10 +199,9 @@ function startProcessing() {
     toggleProcessingBtn.textContent = 'Stop Detection';
     toggleProcessingBtn.classList.add('processing');
 
-    // Send frames to server for processing
     processingInterval = setInterval(() => {
         captureAndSendFrame();
-    }, 300); // Send frame every 300ms (3.33 FPS)
+    }, 300);
 
     console.log('Processing started');
 }
@@ -183,7 +216,6 @@ function stopProcessing() {
     toggleProcessingBtn.textContent = 'Start Detection';
     toggleProcessingBtn.classList.remove('processing');
 
-    // Clear results
     predictionDiv.textContent = 'No gesture';
     confidenceDiv.textContent = '0%';
     confidenceBar.style.width = '0%';
@@ -195,17 +227,14 @@ function stopProcessing() {
 function captureAndSendFrame() {
     if (!videoElement.videoWidth || !videoElement.videoHeight) return;
 
-    // Create a temporary canvas to capture the frame
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
     tempCanvas.width = videoElement.videoWidth;
     tempCanvas.height = videoElement.videoHeight;
 
-    // Draw the video frame (flip horizontally to match the mirrored video)
     tempCtx.scale(-1, 1);
     tempCtx.drawImage(videoElement, -tempCanvas.width, 0);
 
-    // Convert to base64 and send to server
     const imageData = tempCanvas.toDataURL('image/jpeg', 0.8);
     socketio.emit('process_frame_room', { image: imageData });
 }
@@ -217,7 +246,6 @@ function drawLandmarks(landmarks) {
         const points = hand.points;
         const connections = hand.connections;
 
-        // Draw connections
         ctx.strokeStyle = '#00FF00';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -237,7 +265,6 @@ function drawLandmarks(landmarks) {
 
         ctx.stroke();
 
-        // Draw landmarks
         ctx.fillStyle = '#FF0000';
         points.forEach(point => {
             const x = point[0] * canvas.width;
@@ -248,6 +275,14 @@ function drawLandmarks(landmarks) {
             ctx.fill();
         });
     });
+}
+
+function updateCameraStatusDisplay(data) {
+    // Use the global function defined in HTML
+    if (window.updateCameraStatusDisplay) {
+        window.updateCameraStatusDisplay(data);
+    }
+    console.log('Camera status update:', data);
 }
 
 // Event listeners

@@ -20,11 +20,10 @@ def get_user_by_id(user_id):
     except Exception as e:
         print(f"Error getting user by ID: {e}")
         return None
-    
 
 @room_bp.route(('/<room_code>'), methods=["POST", "GET"])
 def room(room_code):
-    """Main translator page - requires login""" # add this in EVERY python file aside app and auth
+    """Main translator page - requires login"""
     user_id = session.get('user_id')
     if not user_id:
         return redirect(url_for('auth.index'))
@@ -33,14 +32,13 @@ def room(room_code):
     if not user_data: 
         return redirect(url_for('auth.index'))
     
-    if room_code is None or session.get("name") is None or room_code not in rooms: # room_Code from home.py
-        # Clear session data if room doesn't exist
+    if room_code is None or session.get("name") is None or room_code not in rooms:
         session.pop("room", None)
         session.pop("name", None)
-        return redirect(url_for('home.home'))  # Redirect to home instead of auth.index
+        return redirect(url_for('home.home'))
 
-    return render_template('room.html', user=user_data, messages=rooms[room_code]["messages"], room_code=room_code)
-    
+    created = session.get('created', False)
+    return render_template('room.html', user=user_data, messages=rooms[room_code]["messages"], room_code=room_code, created=created)
 
 # SocketIO Events
 def init_socketio(socketio, supabase, detector=None):
@@ -52,7 +50,7 @@ def init_socketio(socketio, supabase, detector=None):
         room = session.get('room')
         
         if not user_id or not room or room not in rooms:
-            return False  # Reject connection
+            return False
             
         user_data = get_user_by_id(user_id)
         if not user_data:
@@ -61,8 +59,17 @@ def init_socketio(socketio, supabase, detector=None):
         name = user_data['username']
         
         join_room(room)
-        send({"name": name, "message": "has entered the room"}, to=room) # sends data to socketio.on message in room.js, "message" is the name of the event it calls
+        send({"name": name, "message": "has entered the room"}, to=room)
         rooms[room]["members"] += 1
+        
+        # Initialize camera status tracking for this user
+        if "camera_status" not in rooms[room]:
+            rooms[room]["camera_status"] = {}
+        
+        rooms[room]["camera_status"][user_id] = {
+            "username": name,
+            "camera_ready": False
+        }
         
         print(f"{name} joined room {room}")
         
@@ -72,7 +79,9 @@ def init_socketio(socketio, supabase, detector=None):
             'message': 'Welcome!',
             'model_loaded': model_loaded
         })
-
+        
+        # Send initial camera status
+        check_camera_readiness(room)
 
     @socketio.on('message')
     def message(data):
@@ -82,11 +91,95 @@ def init_socketio(socketio, supabase, detector=None):
         
         content = {
             "name": session.get("name"),
-            "message": data["data"]         # {data: message.value} from room.js
+            "message": data["data"]
         }
         send(content, to=room)
         rooms[room]["messages"].append(content)
         print(f"{session.get('name')} said: {data['data']}")
+
+    @socketio.on('camera_ready')
+    def handle_camera_ready():
+        user_id = session.get('user_id')
+        room = session.get('room')
+        
+        if not user_id or not room or room not in rooms:
+            return
+            
+        if "camera_status" not in rooms[room]:
+            rooms[room]["camera_status"] = {}
+            
+        rooms[room]["camera_status"][user_id]["camera_ready"] = True
+        
+        user_data = get_user_by_id(user_id)
+        if user_data:
+            print(f"{user_data['username']} camera is ready in room {room}")
+            
+        check_camera_readiness(room)
+
+    @socketio.on('camera_stopped')
+    def handle_camera_stopped():
+        user_id = session.get('user_id')
+        room = session.get('room')
+        
+        if not user_id or not room or room not in rooms:
+            return
+            
+        if "camera_status" in rooms[room] and user_id in rooms[room]["camera_status"]:
+            rooms[room]["camera_status"][user_id]["camera_ready"] = False
+            
+        user_data = get_user_by_id(user_id)
+        if user_data:
+            print(f"{user_data['username']} camera stopped in room {room}")
+            
+        check_camera_readiness(room)
+
+    def check_camera_readiness(room):
+        """Check if all users in room have their cameras ready"""
+        if room not in rooms or "camera_status" not in rooms[room]:
+            return
+            
+        camera_status = rooms[room]["camera_status"]
+        total_users = len(camera_status)
+        ready_users = sum(1 for status in camera_status.values() if status["camera_ready"])
+        
+        # Send status update to all users in room
+        emit('camera_status_update', {
+            'total': total_users,
+            'ready': ready_users,
+            'users': camera_status
+        }, room=room)
+        
+        if ready_users == total_users and total_users > 0:
+            emit('all_cameras_ready', room=room)
+            print(f"All cameras ready in room {room}")
+        else:
+            emit('waiting_for_cameras', {
+                'ready': ready_users,
+                'total': total_users
+            }, room=room)
+
+    @socketio.on('start_game')
+    def handle_start_game():
+        user_id = session.get('user_id')
+        room = session.get('room')
+        
+        if not user_id or not room or room not in rooms:
+            return
+            
+        # Check if all cameras are ready before starting
+        if "camera_status" not in rooms[room]:
+            emit('error', {'message': 'Camera status not initialized'})
+            return
+            
+        camera_status = rooms[room]["camera_status"]
+        total_users = len(camera_status)
+        ready_users = sum(1 for status in camera_status.values() if status["camera_ready"])
+        
+        if ready_users == total_users and total_users > 0:
+            emit('start_game_signal', room=room)
+            print(f"Game started in room {room}")
+        else:
+            emit('error', {'message': f'Not all cameras ready. {ready_users}/{total_users} ready.'})
 
     @socketio.on('process_frame_room')
     def handle_room_frame(data):
@@ -107,18 +200,6 @@ def init_socketio(socketio, supabase, detector=None):
             
             # Send result back to the user who sent the frame
             emit('prediction_result', result)
-            
-            # Optionally, you can also broadcast the detected sign to the room
-            #if result['prediction'] != "No gesture" and result['confidence'] > 0.5:
-            #    user_data = get_user_by_id(session.get('user_id'))
-            #    if user_data:
-            #        sign_message = {
-            #            "name": user_data['username'],
-            #            "message": f"🤟 Signed: {result['prediction']} (confidence: {int(result['confidence']*100)}%)",
-            #            "type": "sign_detection"
-            #        }
-            #        send(sign_message, to=room)
-            #        rooms[room]["messages"].append(sign_message)
             
         except Exception as e:
             print(f"Error processing frame in room: {e}")
@@ -141,6 +222,12 @@ def init_socketio(socketio, supabase, detector=None):
 
         if room in rooms:
             rooms[room]["members"] -= 1
+            
+            # Remove user from camera status
+            if "camera_status" in rooms[room] and user_id in rooms[room]["camera_status"]:
+                del rooms[room]["camera_status"][user_id]
+                check_camera_readiness(room)
+            
             print(f"{name} has left the room {room}")
             
             if rooms[room]["members"] <= 0:
@@ -148,5 +235,4 @@ def init_socketio(socketio, supabase, detector=None):
                 print(f"Room {room} has been deleted")
 
         send({"name": name, "message": "has left the room"}, to=room)
-
         print(f'User {user_data["username"]} disconnected')

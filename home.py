@@ -52,8 +52,11 @@ def home():
         if create != False:
             room = generate_unique_code(6)
             rooms[room] = {"members": 0, "messages": []}
+            session['created'] = True
         elif code not in rooms:
             return render_template('home.html', user=user_data, error = "Room does not exist.", code=code)
+        else:
+            session['created'] = False
 
         session["room"] = room  # edit this so that its database related
         session["name"] = name
