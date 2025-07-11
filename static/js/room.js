@@ -8,19 +8,25 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
-const toggleProcessingBtn = document.getElementById('toggleProcessing');
 const statusDiv = document.getElementById('status');
 const predictionDiv = document.getElementById('prediction');
 const confidenceDiv = document.getElementById('confidence');
 const confidenceBar = document.getElementById('confidenceBar');
 const startGameButton = document.getElementById('startgameBtn');
 
+// Debug: Check if elements exist
+console.log('DOM elements check:');
+console.log('startBtn:', startBtn);
+console.log('stopBtn:', stopBtn);
+console.log('startGameButton:', startGameButton);
+console.log('isRoomCreator:', window.isRoomCreator);
+
 // State variables for detector
 let stream = null;
 let isProcessing = false;
 let processingInterval = null;
 let isCameraReady = false;
-let holdCounter = 0;
+let holdCounter = 0; // timer to hold the sign for some time
 
 const customClassNames = {
   '0': 'A', '1': 'B', '2': 'C', '3': 'D', '4': 'E', '5': 'F',
@@ -32,8 +38,12 @@ const customClassNames = {
 const asl_classes = Object.values(customClassNames);
 let targetletter = asl_classes[Math.floor(Math.random() * asl_classes.length)];
 let score = 0;
-document.getElementById('score').textContent = `Score: ${score}`;
-document.getElementById('target-letter').textContent = `Target: ${targetletter}`;
+
+// Initialize UI elements
+const scoreElement = document.getElementById('score');
+const targetElement = document.getElementById('target-letter');
+if (scoreElement) scoreElement.textContent = `Score: ${score}`;
+if (targetElement) targetElement.textContent = `Target: ${targetletter}`;
 
 // Socket event handlers for chat
 socketio.on('message', (data) => {
@@ -65,17 +75,17 @@ socketio.on('prediction_result', function(data) {
     }
 
     if (data.prediction === targetletter && confidencePercent >= 50) {
-        holdCounter += 1;
+        holdCounter += 1; // timer to hold the sign for some time
     } else {
-        holdCounter = 0;
+        holdCounter = 0; // 4 x 300ms = 1200ms or 1.2 sec (see processingInterval)
     }
 
     if (holdCounter >= 4) {
         score += 1;
         holdCounter = 0;
         targetletter = asl_classes[Math.floor(Math.random() * asl_classes.length)];
-        document.getElementById('score').textContent = `Score: ${score}`;
-        document.getElementById('target-letter').textContent = `Target: ${targetletter}`;
+        if (scoreElement) scoreElement.textContent = `Score: ${score}`;
+        if (targetElement) targetElement.textContent = `Target: ${targetletter}`;
     }
 });
 
@@ -97,7 +107,7 @@ socketio.on('camera_status_update', function(data) {
 
 socketio.on('all_cameras_ready', function() {
     // Only enable start game button for room creator
-    if (window.isRoomCreator) {
+    if (window.isRoomCreator && startGameButton) {
         startGameButton.disabled = false;
         startGameButton.textContent = 'Start Game (All Ready!)';
         startGameButton.style.backgroundColor = '#4CAF50';
@@ -106,7 +116,7 @@ socketio.on('all_cameras_ready', function() {
 
 socketio.on('waiting_for_cameras', function(data) {
     // Only update start game button for room creator
-    if (window.isRoomCreator) {
+    if (window.isRoomCreator && startGameButton) {
         startGameButton.disabled = true;
         startGameButton.textContent = `Waiting for cameras (${data.ready}/${data.total})`;
         startGameButton.style.backgroundColor = '#FFA500';
@@ -114,7 +124,30 @@ socketio.on('waiting_for_cameras', function(data) {
 });
 
 socketio.on('start_game_signal', function () {
+    console.log('Game started signal received');
+    stopBtn.disabled=true
+    score = 0; // change this so that score turns zero AFTER saving to db
+    targetletter = asl_classes[Math.floor(Math.random() * asl_classes.length)];
+    if (targetElement) targetElement.textContent = `Target: ${targetletter}`;
+    if (scoreElement) scoreElement.textContent = `Score: ${score}`;
     startProcessing();
+
+    let timeLeft = 10;
+    const timerDisplay = document.getElementById('timer');
+    timerDisplay.textContent = `Time: ${timeLeft}s`;
+
+    const countdown = setInterval(() => {
+    timeLeft--;
+    timerDisplay.textContent = `Time: ${timeLeft}s`;
+    
+    if (timeLeft <= 0) {
+        clearInterval(countdown);
+        stopProcessing();
+        stopBtn.disabled=false;
+        alert("Time's up!");
+        }
+    }, 1000);       // timer, 1000ms = 10 sec
+
 });
 
 // Chat functions
@@ -131,8 +164,9 @@ document.getElementById("message").addEventListener("keypress", function(event) 
     }
 });
 
-// Camera functions
+// Camera functions - These should work for ALL users
 async function startCamera() {
+    console.log('Starting camera...');
     try {
         stream = await navigator.mediaDevices.getUserMedia({
             video: {
@@ -150,11 +184,11 @@ async function startCamera() {
             
             // Notify server that camera is ready
             socketio.emit('camera_ready');
+            console.log('Camera ready event sent to server');
         };
 
         startBtn.disabled = true;
         stopBtn.disabled = false;
-        toggleProcessingBtn.disabled = false;
 
         console.log('Camera started successfully');
     } catch (error) {
@@ -164,6 +198,7 @@ async function startCamera() {
 }
 
 function stopCamera() {
+    console.log('Stopping camera...');
     if (stream) {
         stream.getTracks().forEach(track => track.stop());
         stream = null;
@@ -175,46 +210,48 @@ function stopCamera() {
 
     startBtn.disabled = false;
     stopBtn.disabled = true;
-    toggleProcessingBtn.disabled = true;
 
     // Notify server that camera is stopped
     socketio.emit('camera_stopped');
+    console.log('Camera stopped event sent to server');
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     console.log('Camera stopped');
 }
 
-// Updated start game button handler - only for room creators
-startGameButton.addEventListener('click', function () {
+// Start game function - only for room creators
+function startGame() {
+    console.log('Start game button clicked');
+    if (!window.isRoomCreator) {
+        console.log('Not room creator, ignoring start game request');
+        return;
+    }
     socketio.emit('start_game');
-});
+}
 
 function startProcessing() {
+    console.log('Starting processing...');
     if (!stream) {
         alert('Please start the camera first');
         return;
     }
 
     isProcessing = true;
-    toggleProcessingBtn.textContent = 'Stop Detection';
-    toggleProcessingBtn.classList.add('processing');
 
     processingInterval = setInterval(() => {
         captureAndSendFrame();
-    }, 300);
+    }, 300); // callbacks every 300 ms
 
     console.log('Processing started');
 }
 
 function stopProcessing() {
+    console.log('Stopping processing...');
     isProcessing = false;
     if (processingInterval) {
         clearInterval(processingInterval);
         processingInterval = null;
     }
-
-    toggleProcessingBtn.textContent = 'Start Detection';
-    toggleProcessingBtn.classList.remove('processing');
 
     predictionDiv.textContent = 'No gesture';
     confidenceDiv.textContent = '0%';
@@ -285,16 +322,28 @@ function updateCameraStatusDisplay(data) {
     console.log('Camera status update:', data);
 }
 
-// Event listeners
-startBtn.addEventListener('click', startCamera);
-stopBtn.addEventListener('click', stopCamera);
-toggleProcessingBtn.addEventListener('click', function() {
-    if (isProcessing) {
-        stopProcessing();
-    } else {
-        startProcessing();
-    }
-});
+// Event listeners - These should work for ALL users
+if (startBtn) {
+    startBtn.addEventListener('click', function() {
+        console.log('Start camera button clicked');
+        startCamera();
+    });
+}
+
+if (stopBtn) {
+    stopBtn.addEventListener('click', function() {
+        console.log('Stop camera button clicked');
+        stopCamera();
+    });
+}
+
+// Start game button - only for room creators
+if (startGameButton) {
+    startGameButton.addEventListener('click', function() {
+        console.log('Start game button clicked, isRoomCreator:', window.isRoomCreator);
+        startGame();
+    });
+}
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', function() {
@@ -302,3 +351,4 @@ window.addEventListener('beforeunload', function() {
 });
 
 console.log('Room with Sign Language Detection initialized');
+console.log('Final check - isRoomCreator:', window.isRoomCreator);

@@ -29,10 +29,10 @@
                 <canvas id="canvas"></canvas>
             </div>
             
+            <!-- Camera controls - available for ALL users -->
             <div class="detector-controls">
                 <button id="startBtn" class="btn">Start Camera</button>
                 <button id="stopBtn" class="btn danger" disabled>Stop Camera</button>
-                <button id="toggleProcessing" class="btn" disabled>Start Detection</button>
             </div>
             
             <div class="detection-results">
@@ -48,13 +48,27 @@
             </div>
         </div>
     </div>
+    <div id="timer"></div>
     <div id="target-letter"></div>
     <div id="score"></div>
-    <div id="created">Created: {{ created }}</div>
+    <div id="created">
+        {% if created %}
+            Created by: You (Room Creator)
+        {% else %}
+            Room Member
+        {% endif %}
+    </div>
     
     <!-- Game controls - only show for room creator -->
     {% if created %}
-        <button type="button" id="startgameBtn">Start Game</button>
+        <div class="game-controls">
+            <button type="button" id="startgameBtn" disabled>Waiting for cameras...</button>
+            <p><em>As the room creator, you can start the game once all participants have their cameras ready.</em></p>
+        </div>
+    {% else %}
+        <div class="game-controls">
+            <p><em>Waiting for room creator to start the game...</em></p>
+        </div>
     {% endif %}
     
     <!-- Camera status display for all users -->
@@ -98,6 +112,12 @@
                 `;
                 cameraList.appendChild(statusDiv);
             }
+        }
+        
+        // Debug function to check if buttons are working
+        function testCameraButton() {
+            console.log('Camera button clicked!');
+            console.log('User is room creator:', window.isRoomCreator);
         }
     </script>
     
