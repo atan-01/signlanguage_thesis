@@ -21,11 +21,6 @@ let processingInterval = null;
 let frameCount = 0;
 let lastFpsTime = Date.now();
 
-// Socket event handlers
-socket.on('connect', function() {
-    console.log('Connected to server');
-});
-
 socket.on('status', function(data) {
     statusDiv.textContent = data.message + (data.model_loaded ? ' (Model Ready)' : ' (Demo Mode)');
     statusDiv.className = 'status connected';
@@ -52,11 +47,6 @@ socket.on('prediction_result', function(data) {
 socket.on('error', function(data) {
     console.error('Server error:', data.message);
     statusDiv.textContent = 'Error: ' + data.message;
-    statusDiv.className = 'status disconnected';
-});
-
-socket.on('disconnect', function() {
-    statusDiv.textContent = 'Disconnected from server';
     statusDiv.className = 'status disconnected';
 });
 

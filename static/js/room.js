@@ -1,8 +1,16 @@
 const socketio = io();
 
-const messages = document.getElementById("messages");
+window.addEventListener('DOMContentLoaded', () => {
+    if (window.isRoomCreator) {
+        const overlay = document.getElementById('creator-participate');
+        if (overlay) {
+            overlay.style.display = 'flex';
+        }
+    }
+});
 
 // Get DOM elements for detector
+const messages = document.getElementById("messages");
 const videoElement = document.getElementById('videoElement');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -26,6 +34,7 @@ let stream = null;
 let isProcessing = false;
 let processingInterval = null;
 let isCameraReady = false;
+let gameTypeSelected = false;
 let holdCounter = 0; // timer to hold the sign for some time
 
 const customClassNames = {
@@ -86,6 +95,8 @@ socketio.on('prediction_result', function(data) {
         targetletter = asl_classes[Math.floor(Math.random() * asl_classes.length)];
         if (scoreElement) scoreElement.textContent = `Score: ${score}`;
         if (targetElement) targetElement.textContent = `Target: ${targetletter}`;
+
+        socketio.emit('score_update', { score: score });
     }
 });
 
@@ -106,12 +117,8 @@ socketio.on('camera_status_update', function(data) {
 });
 
 socketio.on('all_cameras_ready', function() {
-    // Only enable start game button for room creator
-    if (window.isRoomCreator && startGameButton) {
-        startGameButton.disabled = false;
-        startGameButton.textContent = 'Start Game (All Ready!)';
-        startGameButton.style.backgroundColor = '#4CAF50';
-    }
+    allCamerasReady = true;
+    tryEnableStartGameButton();
 });
 
 socketio.on('waiting_for_cameras', function(data) {
@@ -121,6 +128,13 @@ socketio.on('waiting_for_cameras', function(data) {
         startGameButton.textContent = `Waiting for cameras (${data.ready}/${data.total})`;
         startGameButton.style.backgroundColor = '#FFA500';
     }
+});
+
+socketio.on('game_type_set', (data) => {
+    gameTypeSelected = true;
+    console.log("Game type is:", data.type);
+    document.getElementById('game-type-display').innerText = `Mode: ${data.type}`;
+    tryEnableStartGameButton();
 });
 
 socketio.on('start_game_signal', function () {
@@ -145,10 +159,79 @@ socketio.on('start_game_signal', function () {
         stopProcessing();
         stopBtn.disabled=false;
         alert("Time's up!");
+        document.getElementById('leaderboard').style.display = 'flex';
+        const gameTypeSelect = document.getElementById('game-type-select');
+        gameTypeSelect.style.display = 'flex';
+        gameTypeSelected = false;
         }
-    }, 1000);       // timer, 1000ms = 10 sec
+    }, 2000);       // timer, 1000ms = 10 sec
+}); 
 
+socketio.on('leaderboard_update', function(data) {
+    // Add/update leaderboard
+    const list = document.getElementById('leaderboard-list');
+    const existingRows = list.getElementsByClassName('leaderboard-row');
+
+    let found = false;
+
+    // Check if the user already exists in the leaderboard
+    for (let row of existingRows) {
+        const usernameSpan = row.querySelector('.username');
+        if (usernameSpan && usernameSpan.textContent === data.username) {
+            // Update the score
+            const scoreSpan = row.querySelector('.score');
+            scoreSpan.textContent = data.score;
+            found = true;
+            break;
+        }
+    }
+
+    // If not found, add new row
+    if (!found) {
+        const newRow = document.createElement('div');
+        newRow.className = 'leaderboard-row';
+        newRow.innerHTML = `
+            <span class="username">${data.username}</span>
+            <span class="score">${data.score}</span>
+        `;
+        list.appendChild(newRow);
+    }
+
+    // Optionally: sort leaderboard descending by score
+    //sortLeaderboard();
 });
+
+function sortLeaderboard() {
+    const list = document.getElementById('leaderboard-list');
+    const rows = Array.from(list.getElementsByClassName('leaderboard-row'));
+
+    rows.sort((a, b) => {
+        const scoreA = parseInt(a.querySelector('.score').textContent);
+        const scoreB = parseInt(b.querySelector('.score').textContent);
+        return scoreB - scoreA; // descending
+    });
+
+    // Re-add rows in sorted order
+    list.innerHTML = '';
+    rows.forEach((row, index) => {
+        // Optionally: add a ranking number before username
+        row.innerHTML = `
+            <span>${index + 1}</span>
+            ${row.innerHTML}
+        `;
+        list.appendChild(row);
+    });
+}
+
+function participate_btn() {
+    document.getElementById('creator-participate').style.display = 'none';
+}
+
+function closeLeaderboard() {
+    document.getElementById('leaderboard').style.display = 'none';
+    const list = document.getElementById('leaderboard-list');
+    list.innerHTML = '';
+}
 
 // Chat functions
 const sendMessage = () => {
@@ -217,6 +300,20 @@ function stopCamera() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     console.log('Camera stopped');
+}
+
+function submitGameType() {
+    const selectedType = document.getElementById('gameType').value;
+    socketio.emit('set_game_type', { type: selectedType });
+    document.getElementById('game-type-select').style.display = 'none';
+}
+
+function tryEnableStartGameButton() {
+    if (window.isRoomCreator && allCamerasReady && gameTypeSelected && startGameButton) {
+        startGameButton.disabled = false;
+        startGameButton.textContent = 'Start Game (All Ready!)';
+        startGameButton.style.backgroundColor = '#4CAF50';
+    }
 }
 
 // Start game function - only for room creators

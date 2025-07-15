@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/room.css') }}">
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
 </head>
-<body>
+<body data-is-room-creator="{{ created|tojson }}">
     <div class="room-container">
         <div class="message-box">
             <h2>Room: {{ room_code }}</h2>
@@ -61,26 +61,61 @@
     
     <!-- Game controls - only show for room creator -->
     {% if created %}
+        <div class="creator-participate-overlay" id="creator-participate" style="display: none;">
+            <div class="participate">
+                <h2>Participate?</h2>
+                <p>If you can read this... nice.</p>
+                <button onclick="participate_btn()">Yes</button>
+                <button onclick="notparticipate_btn()">No</button>
+            </div>
+        </div>
+
         <div class="game-controls">
             <button type="button" id="startgameBtn" disabled>Waiting for cameras...</button>
             <p><em>As the room creator, you can start the game once all participants have their cameras ready.</em></p>
+        </div>
+        <div id="game-type-select">
+            <h3>Select Game Type:</h3>
+            <select id="gameType">
+                <option value="timed">Timed (10 seconds)</option>
+                <option value="game2......">game 2...</option>
+                <option value="game3......">game 3...</option>
+            </select>
+            <button onclick="submitGameType()">Confirm</button>
         </div>
     {% else %}
         <div class="game-controls">
             <p><em>Waiting for room creator to start the game...</em></p>
         </div>
     {% endif %}
-    
+    <div id="game-type-display">Mode: Not selected</div>
     <!-- Camera status display for all users -->
     <div id="camera-status">
         <h4>Camera Status:</h4>
         <div id="camera-list"></div>
     </div>
 
+    <div class="leaderboard-overlay" id="leaderboard" style="display: none;">
+        <div class="leaderboard">
+            <h2>🏆 Leaderboard</h2>
+
+            <div class="leaderboard-table">
+                <div class="leaderboard-header">
+                    <span>Username</span>
+                    <span>Score</span>
+                </div>
+                <div id="leaderboard-list" class="leaderboard-rows">
+                    <!-- <div class="leaderboard-row">  class for row items -->
+                </div>
+            </div>
+
+            <button onclick="closeLeaderboard()">Close</button>
+        </div>
+    </div>
+
     <script>
         // Set room creator status BEFORE loading room.js
-        window.isRoomCreator = {{ created|tojson }};
-        
+        window.isRoomCreator = document.body.dataset.isRoomCreator === "true";
         const createmessage = (name, msg, type = 'normal') => {
             const content = `
             <div class="text">

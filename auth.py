@@ -79,16 +79,31 @@ def get_user_by_id(user_id):
 # Routes
 @auth_bp.route('/')
 def index():
-    """Main route - shows login page or redirects to main app if logged in"""
+    """Main route - redirect to login or home if already logged in"""
     user_id = session.get('user_id')
     if user_id:
         user_data = get_user_by_id(user_id)
         if user_data:
-            # User is logged in, redirect to main app
-            return redirect(url_for('translator.main'))
-    
-    # Show login page
-    return render_template('index.html')
+            return redirect(url_for('home.home'))  # Assuming home is your post-login route
+    return redirect(url_for('auth.login'))  # Redirect to /login
+
+@auth_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
+
+        user_data = get_user_by_username(username)
+
+        if user_data and check_password_hash(user_data['password_hash'], password):
+            session['user_id'] = user_data['id']
+            print(f"User logged in: {username}")
+            return jsonify({'success': True, 'redirect': url_for('home.home')})
+
+        return jsonify({'error': 'Invalid username or password'}), 401
+
+    return render_template('index.html')  # Render login form
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
@@ -98,43 +113,22 @@ def register():
         email = data.get('email')
         password = data.get('password')
         role = data.get('role')
-        
-        # Check if username exists
+
         if get_user_by_username(username):
             return jsonify({'error': 'Username already exists'}), 400
-        
-        # Check if email exists
+
         if get_user_by_email(email):
             return jsonify({'error': 'Email already exists'}), 400
-        
-        # Create new user
+
         user_data = create_user(username, email, password, role)
         if user_data:
             session['user_id'] = user_data['id']
             print(f"New user registered: {username} ({email})")
-            return jsonify({'success': True, 'redirect': url_for('translator.main')})
+            return jsonify({'success': True, 'redirect': url_for('home.home')})
         else:
             return jsonify({'error': 'Registration failed'}), 500
-    
-    return render_template('index.html')
 
-@auth_bp.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        data = request.get_json()
-        username = data.get('username')
-        password = data.get('password')
-        
-        user_data = get_user_by_username(username)
-        
-        if user_data and check_password_hash(user_data['password_hash'], password):
-            session['user_id'] = user_data['id']
-            print(f"User logged in: {username}")
-            return jsonify({'success': True, 'redirect': url_for('home.home')}) # 'home' blueprint + 'home' function
-        
-        return jsonify({'error': 'Invalid username or password'}), 401
-    
-    return render_template('index.html')
+    return render_template('index.html')  # Could be a shared form with login
 
 @auth_bp.route('/logout')
 def logout():
@@ -143,6 +137,6 @@ def logout():
         user_data = get_user_by_id(user_id)
         if user_data:
             print(f"User logged out: {user_data['username']}")
-    
+
     session.pop('user_id', None)
-    return redirect(url_for('auth.index'))
+    return redirect(url_for('auth.login'))

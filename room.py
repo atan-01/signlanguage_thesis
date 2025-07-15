@@ -75,10 +75,7 @@ def init_socketio(socketio, supabase, detector=None):
         
         # Send status with detector info if available
         model_loaded = detector.model_loaded if detector else False
-        emit('status', {
-            'message': 'Welcome!',
-            'model_loaded': model_loaded
-        })
+         
         
         # Send initial camera status
         check_camera_readiness(room)
@@ -158,6 +155,14 @@ def init_socketio(socketio, supabase, detector=None):
                 'total': total_users
             }, room=room)
 
+    @socketio.on('set_game_type')
+    def handle_game_type(data):
+        room = session.get("room")
+        game_type = data.get('type')
+        if room and room in rooms:
+            rooms[room]['game_type'] = game_type
+            emit('game_type_set', {'type': game_type}, room=room)
+
     @socketio.on('start_game')
     def handle_start_game():
         user_id = session.get('user_id')
@@ -180,6 +185,18 @@ def init_socketio(socketio, supabase, detector=None):
             print(f"Game started in room {room}")
         else:
             emit('error', {'message': f'Not all cameras ready. {ready_users}/{total_users} ready.'})
+
+
+    @socketio.on('score_update')
+    def handle_score_update(data):
+        user_id = session.get('user_id')
+        user_data = get_user_by_id(user_id)
+        username = user_data['username']
+        room = session.get("room")
+        score = data.get("score")
+
+        if room and username:
+            emit('leaderboard_update', {'username': username, 'score': score}, room=room)
 
     @socketio.on('process_frame_room')
     def handle_room_frame(data):
@@ -216,7 +233,7 @@ def init_socketio(socketio, supabase, detector=None):
         user_data = get_user_by_id(user_id)
         if not user_data:
             return
-            
+        
         name = user_data['username']
         leave_room(room)
 
