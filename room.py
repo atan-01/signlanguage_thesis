@@ -75,7 +75,7 @@ def init_socketio(socketio, supabase, detector=None):
         
         # Send status with detector info if available
         model_loaded = detector.model_loaded if detector else False
-         
+        emit('status', {'message': 'Connected to room', 'model_loaded': model_loaded})
         
         # Send initial camera status
         check_camera_readiness(room)
