@@ -36,6 +36,7 @@ let processingInterval = null;
 let isCameraReady = false;
 let gameTypeSelected = false;
 let holdCounter = 0; // timer to hold the sign for some time
+let participate = true;
 
 const customClassNames = {
   '0': 'A', '1': 'B', '2': 'C', '3': 'D', '4': 'E', '5': 'F',
@@ -159,10 +160,15 @@ socketio.on('start_game_signal', function () {
         stopProcessing();
         stopBtn.disabled=false;
         alert("Time's up!");
-        document.getElementById('leaderboard').style.display = 'flex';
+        if (participate) {
+            document.getElementById('leaderboard').style.display = 'flex';
+        }
         const gameTypeSelect = document.getElementById('game-type-select');
         gameTypeSelect.style.display = 'flex';
         gameTypeSelected = false;
+        if (startGameButton) {
+            startGameButton.disabled = false;
+        }
         }
     }, 2000);       // timer, 1000ms = 10 sec
 }); 
@@ -225,6 +231,15 @@ function sortLeaderboard() {
 
 function participate_btn() {
     document.getElementById('creator-participate').style.display = 'none';
+}
+
+function notparticipate_btn() {
+    participate = false;
+    startBtn.disabled = true;
+    stopBtn.disabled = true;
+    document.getElementById('creator-participate').style.display = 'none';
+    socketio.emit('camera_ready');
+    console.log('Camera ready event sent to server');
 }
 
 function closeLeaderboard() {
@@ -319,16 +334,13 @@ function tryEnableStartGameButton() {
 // Start game function - only for room creators
 function startGame() {
     console.log('Start game button clicked');
-    if (!window.isRoomCreator) {
-        console.log('Not room creator, ignoring start game request');
-        return;
-    }
     socketio.emit('start_game');
 }
 
 function startProcessing() {
     console.log('Starting processing...');
-    if (!stream) {
+    if (participate) {
+        if (!stream) {
         alert('Please start the camera first');
         return;
     }
@@ -340,6 +352,7 @@ function startProcessing() {
     }, 300); // callbacks every 300 ms
 
     console.log('Processing started');
+    }
 }
 
 function stopProcessing() {
@@ -412,11 +425,17 @@ function drawLandmarks(landmarks) {
 }
 
 function updateCameraStatusDisplay(data) {
-    // Use the global function defined in HTML
-    if (window.updateCameraStatusDisplay) {
-        window.updateCameraStatusDisplay(data);
-    }
     console.log('Camera status update:', data);
+
+    // Update global allCamerasReady
+    allCamerasReady = data.ready === data.total && data.total > 0;
+
+    const statusdiv = document.getElementById('camera-status');
+    if (statusdiv) {
+        statusdiv.textContent = `${data.ready}/${data.total} cameras ready`;
+    }
+
+    tryEnableStartGameButton();
 }
 
 // Event listeners - These should work for ALL users
@@ -426,8 +445,7 @@ if (startBtn) {
         startCamera();
     });
 }
-
-if (stopBtn) {
+if (stopBtn) { // these type of codes are to verify if the button is in the html (e.g. in the creator but not in user)
     stopBtn.addEventListener('click', function() {
         console.log('Stop camera button clicked');
         stopCamera();
@@ -438,6 +456,10 @@ if (stopBtn) {
 if (startGameButton) {
     startGameButton.addEventListener('click', function() {
         console.log('Start game button clicked, isRoomCreator:', window.isRoomCreator);
+        startGameButton.disabled = true;
+        if (!participate) {
+            document.getElementById('leaderboard').style.display = 'flex';
+        }
         startGame();
     });
 }
