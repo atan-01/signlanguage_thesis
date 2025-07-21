@@ -101,6 +101,10 @@ socketio.on('prediction_result', function(data) {
     }
 });
 
+socketio.on('participants_updated', function(data) {
+    updateParticipantsList(data.participants);
+});
+
 socketio.on('error', function(data) {
     console.error('Server error:', data.message);
     statusDiv.textContent = 'Error: ' + data.message;
@@ -246,6 +250,27 @@ function closeLeaderboard() {
     document.getElementById('leaderboard').style.display = 'none';
     const list = document.getElementById('leaderboard-list');
     list.innerHTML = '';
+}
+
+function updateParticipantsList(participants) {
+    const participantList = document.getElementById('participantList');
+    
+    if (!participantList) {
+        console.log('Participant list element not found');
+        return;
+    }
+    
+    // Clear existing list
+    participantList.innerHTML = '';
+    
+    // Add each participant as a list item
+    participants.forEach(function(participant) {
+        const listItem = document.createElement('li');
+        listItem.textContent = participant;
+        participantList.appendChild(listItem);
+    });
+    
+    console.log('Updated participants list:', participants);
 }
 
 // Chat functions
@@ -437,6 +462,30 @@ function updateCameraStatusDisplay(data) {
 
     tryEnableStartGameButton();
 }
+
+// aggressive exit function
+function exitroom() {
+    console.log('Immediate exit initiated...');
+    if (isProcessing) {
+        stopProcessing();
+    }
+    
+    // Clear any intervals
+    if (processingInterval) {
+        clearInterval(processingInterval);
+        processingInterval = null;
+    }
+
+    try {
+        socketio.disconnect();
+        window.location.href = '/home/';
+        
+    } catch (error) {
+        console.error('Error during disconnect:', error);
+        window.location.href = '/home/';
+    }
+}
+
 
 // Event listeners - These should work for ALL users
 if (startBtn) {

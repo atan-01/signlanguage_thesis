@@ -38,7 +38,10 @@ def room(room_code):
         return redirect(url_for('home.home'))
 
     created = session.get('created', False)
-    return render_template('room.html', user=user_data, messages=rooms[room_code]["messages"], room_code=room_code, created=created)
+
+    participants = rooms[room_code].get("participants", [])
+
+    return render_template('room.html', user=user_data, messages=rooms[room_code]["messages"], room_code=room_code, created=created, participants=participants)
 
 # SocketIO Events
 def init_socketio(socketio, supabase, detector=None):
@@ -59,6 +62,13 @@ def init_socketio(socketio, supabase, detector=None):
         name = user_data['username']
         
         join_room(room)
+
+        if name not in rooms[room].get("participants", []):
+            rooms[room].setdefault("participants", []).append(name) # setdefault = creates one if does not exist
+
+        emit('participants_updated', {'participants': rooms[room]["participants"]}, room=room)
+
+
         send({"name": name, "message": "has entered the room"}, to=room)
         rooms[room]["members"] += 1
         
@@ -240,6 +250,14 @@ def init_socketio(socketio, supabase, detector=None):
         if room in rooms:
             rooms[room]["members"] -= 1
             
+            if name in rooms[room].get("participants", []):
+                rooms[room]["participants"].remove(name)
+                
+                # Broadcast updated participant list to ALL remaining users
+                emit('participants_updated', {
+                    'participants': rooms[room]["participants"]
+                }, room=room)
+
             # Remove user from camera status
             if "camera_status" in rooms[room] and user_id in rooms[room]["camera_status"]:
                 del rooms[room]["camera_status"][user_id]
@@ -253,3 +271,4 @@ def init_socketio(socketio, supabase, detector=None):
 
         send({"name": name, "message": "has left the room"}, to=room)
         print(f'User {user_data["username"]} disconnected')
+    

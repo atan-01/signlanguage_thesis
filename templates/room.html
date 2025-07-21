@@ -47,6 +47,14 @@
                 </div>
             </div>
         </div>
+        <div class="room-participants">
+            <h3>Participants:</h3>
+            <ul id="participantList">
+                {% for participant in participants %}
+                <li>{{ participant }}</li>
+                {% endfor %}
+            </ul>
+        </div>
     </div>
     <div id="timer"></div>
     <div id="target-letter"></div>
@@ -94,6 +102,8 @@
         <h4>Camera Status:</h4>
         <div id="camera-list"></div>
     </div>
+
+    <button class="exit-room" onclick="exitroom()"> Exit room </button>
 
     <div class="leaderboard-overlay" id="leaderboard" style="display: none;">
         <div class="leaderboard">

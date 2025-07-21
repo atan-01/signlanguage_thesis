@@ -84,7 +84,7 @@ def index():
     if user_id:
         user_data = get_user_by_id(user_id)
         if user_data:
-            return redirect(url_for('home.home'))  # Assuming home is your post-login route
+            return redirect(url_for('home.home'))
     return redirect(url_for('auth.login'))  # Redirect to /login
 
 @auth_bp.route('/login', methods=['GET', 'POST'])

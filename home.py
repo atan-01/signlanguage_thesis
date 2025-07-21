@@ -31,6 +31,7 @@ def generate_unique_code(length):
 @home_bp.route('/', methods=["POST", "GET"])
 def home():
     """Main translator page - requires login""" # add this in EVERY python file aside app and auth
+    print("user is in home")
     user_id = session.get('user_id')
     if not user_id:
         return redirect(url_for('auth.index'))
@@ -51,7 +52,7 @@ def home():
         room = code
         if create != False:
             room = generate_unique_code(6)
-            rooms[room] = {"members": 0, "messages": []}
+            rooms[room] = {"members": 0, "messages": [], "participants": []}
             session['created'] = True
         elif code not in rooms:
             return render_template('home.html', user=user_data, error = "Room does not exist.", code=code)
