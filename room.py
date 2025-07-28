@@ -1,7 +1,5 @@
-from flask import Blueprint, render_template, session, redirect, url_for, current_app, request
+from flask import Blueprint, render_template, session, redirect, url_for, current_app
 from flask_socketio import emit, join_room, leave_room, send
-import random
-from string import ascii_uppercase
 from home import rooms
 import cv2
 import numpy as np

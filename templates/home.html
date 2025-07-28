@@ -8,20 +8,41 @@
     <script src="{{ url_for('static', filename='js/home.js') }}" defer></script>
 </head>
 <body>
-    <div class="user-avatar">{{ user.username }}</div>
-    <button class="btn" onclick="mainbtn()"> go to main app </button>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="logo">FluentHands</div>
+        <div class="user-avatar">{{ user.username }}</div>
+    </nav>
 
-    <form method="post" class="buttons">
-        <div class="join">
-            <input type="text" placeholder="Room Code" name="code" value="{{ code }}"/>
-            <button type="submit" name="join"> Join a room </button>
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="welcome-section">
+            <h1 class="welcome-title">Ready to connect?</h1>
+            <p class="welcome-subtitle">Start or join a game</p>
         </div>
-        <button type="submit" name="create"> Create a room </button>
-        {% if error %}
-            <ul>
-                <li>{{error}}</li>
-            </ul>
-        {% endif %}
-    </form>
+
+        <button class="btn" onclick="mainbtn()">Go to main app</button>
+
+        <!-- Single Player Section -->
+        <div class="single-player-section">
+            <h3 class="single-player-title">Practice Solo</h3>
+            <button class="single-player-btn" onclick="singlePlayer()">Play Single Player</button>
+        </div>
+
+        <form method="post" class="buttons">
+            <div class="join">
+                <input type="text" placeholder="Enter room code" name="code" value="{{ code }}"/>
+                <button type="submit" name="join">Join</button>
+            </div>
+            <button type="submit" name="create">Create a room</button>
+            {% if error %}
+                <ul>
+                    <li>{{error}}</li>
+                </ul>
+            {% endif %}
+        </form>
+
+        <button class="learning-mats" onclick="learnasl()">Learn ASL!</button>
+    </div>
 </body>
 </html>

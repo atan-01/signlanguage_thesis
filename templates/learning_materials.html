@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/learning_materials.css') }}">
+    <script src="{{ url_for('static', filename='js/learning_materials.js') }}" defer></script>
+    <title>Document</title>
+</head>
+<body>
+    <h1>{{ category.title() }}</h1>
+
+    {% if category == 'alphabet' %}
+        <p>This is where you teach the ASL Alphabet.</p>
+
+        <div class="learn-mats-buttons">
+            {% for letter in 'ABCDEFGHIKLMNOPQRSTUVWXY' %}
+                <button class="class-btn" onclick="matcontent('{{ letter }}')">{{ letter }}</button>
+            {% endfor %}
+        </div>
+    {% elif category == 'numbers' %}
+        <p>This is where you teach ASL Numbers.</p>
+
+        <div class="learn-mats-buttons">
+            {% for number in '123456789' %}
+                <button class="class-btn" onclick="matcontent('{{ number }}')">{{ number }}</button>
+            {% endfor %}
+        </div>
+    {% elif category == 'words' %}
+        <p>This is where you teach Common ASL Words.</p>
+    {% endif %}
+
+    <div class="learning-content" id="learning-content">
+        <div class="contents" id="contents">
+            content
+        </div>
+        <button class="content-close" onclick="closecontent()"> Close </button>
+    </div>
+</body>
+</html>

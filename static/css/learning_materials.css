@@ -1,0 +1,15 @@
+.learning-content {
+    width: 400px;
+    height: 250px;
+    border-radius: 10px;
+    border: 1px solid black;
+    z-index: 1000;
+    display: none;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    align-items: center;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}

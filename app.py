@@ -7,6 +7,7 @@ from auth import auth_bp
 from translator import translator_bp, register_detection_socketio_events, detector
 from home import home_bp
 from room import room_bp, init_socketio
+from learn import learn_bp
     
 # Load environment variables, access .env file
 load_dotenv()
@@ -36,12 +37,12 @@ def create_app():
     app.register_blueprint(translator_bp)
     app.register_blueprint(home_bp)
     app.register_blueprint(room_bp)
+    app.register_blueprint(learn_bp)
     
     # Initialize SocketIO events for translator
     init_socketio(socketio, supabase, detector)
     register_detection_socketio_events(socketio, supabase, detector)
 
-    
     return app, socketio
 
 if __name__ == '__main__':

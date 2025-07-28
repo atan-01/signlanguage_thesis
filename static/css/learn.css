@@ -1,0 +1,60 @@
+body {
+    background-image: url('../images/Categories.png');
+    background-size: fit;    /* scale image to fill button */
+    background-position: center;
+    background-repeat: no-repeat;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: sans-serif;
+}
+
+.button-wrapper {
+  display: flex;
+  gap: 40px; /* spacing between buttons */
+  flex-wrap: wrap; /* allow wrapping on smaller screens */
+  justify-content: center;
+  align-items: center;
+}
+
+.icon-button {
+  width: 220px;              /* or whatever size you want */
+  height: 430px;
+  background-size: contain;    /* scale image to fill button */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: transparent;
+  border: none;
+  border-radius: 12px;       /* optional: rounded corners */
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.icon-button:hover {
+  transform: scale(1.05);    /* grow a bit on hover */
+}
+
+.alphabet-btn {
+  background-image: url('../images/alphabets.png');
+}
+
+.numbers-btn {
+  background-image: url('../images/numbers.png');
+}
+
+.words-btn {
+  background-image: url('../images/words.png');
+}
+
+.categories {
+    position: fixed;
+    top: 100px;
+    left: 100px;
+    font-size: 60px;
+    color: white;
+    font-family: "Baloo 2", sans-serif;
+    font-weight: 600;
+}

@@ -31,6 +31,7 @@ def generate_unique_code(length):
 @home_bp.route('/', methods=["POST", "GET"])
 def home():
     """Main translator page - requires login""" # add this in EVERY python file aside app and auth
+    print
     print("user is in home")
     user_id = session.get('user_id')
     if not user_id:
@@ -65,4 +66,3 @@ def home():
         return redirect(url_for('room.room', room_code=room))
 
     return render_template('home.html', user=user_data)
-
