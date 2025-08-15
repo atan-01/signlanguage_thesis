@@ -1,3 +1,5 @@
+const socketio = io();
+
 const content_div = document.getElementById('learning-content');
 const contents = document.getElementById('contents')
 function matcontent(asl_class) {

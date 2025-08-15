@@ -1,4 +1,9 @@
-const socketio = io();
+// room.js - Updated to use shared socket connection
+let detector;
+let allCamerasReady = false;
+let gameTypeSelected = false;
+let participate = true;
+let socketio; // Will use shared socket from detector
 
 window.addEventListener('DOMContentLoaded', () => {
     if (window.isRoomCreator) {
@@ -7,240 +12,207 @@ window.addEventListener('DOMContentLoaded', () => {
             overlay.style.display = 'flex';
         }
     }
+
+    // Initialize the sign language detector for room mode with shared socket
+    detector = new SignLanguageDetector({
+        isRoomMode: true,
+        enableGameLogic: true,
+        enableFpsCounter: false,
+        processingInterval: 300,
+        frameQuality: 0.8,
+        participate: participate,
+        onCameraStart: function() {
+            console.log('Camera started in room mode');
+        },
+        onCameraStop: function() {
+            console.log('Camera stopped in room mode');
+        },
+        onProcessingStart: function() {
+            console.log('Processing started in room mode');
+        },
+        onProcessingStop: function() {
+            console.log('Processing stopped in room mode');
+        }
+    });
+
+    // Use the shared socket from the detector
+    socketio = detector.socketio;
+    
+    // Setup room-specific socket event handlers on the shared socket
+    setupRoomSocketHandlers();
 });
 
-// Get DOM elements for detector
+// Get DOM elements for room-specific functionality
 const messages = document.getElementById("messages");
-const videoElement = document.getElementById('videoElement');
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const startBtn = document.getElementById('startBtn');
-const stopBtn = document.getElementById('stopBtn');
-const statusDiv = document.getElementById('status');
-const predictionDiv = document.getElementById('prediction');
-const confidenceDiv = document.getElementById('confidence');
-const confidenceBar = document.getElementById('confidenceBar');
 const startGameButton = document.getElementById('startgameBtn');
 
 // Debug: Check if elements exist
 console.log('DOM elements check:');
-console.log('startBtn:', startBtn);
-console.log('stopBtn:', stopBtn);
 console.log('startGameButton:', startGameButton);
 console.log('isRoomCreator:', window.isRoomCreator);
 
-// State variables for detector
-let stream = null;
-let isProcessing = false;
-let processingInterval = null;
-let isCameraReady = false;
-let gameTypeSelected = false;
-let holdCounter = 0; // timer to hold the sign for some time
-let participate = true;
-
-const customClassNames = {
-  '0': 'A', '1': 'B', '2': 'C', '3': 'D', '4': 'E', '5': 'F',
-  '6': 'G', '7': 'H', '8': 'I', '9': 'K', '10': 'L', '11': 'M',
-  '12': 'N', '13': 'O', '14': 'P', '15': 'Q', '16': 'R', '17': 'T',
-  '18': 'U', '19': 'V', '20': 'W', '21': 'X', '22': 'Y', '23': 'ILY'
-};
-
-const asl_classes = Object.values(customClassNames);
-let targetletter = asl_classes[Math.floor(Math.random() * asl_classes.length)];
-let score = 0;
-
-// Initialize UI elements
-const scoreElement = document.getElementById('score');
-const targetElement = document.getElementById('target-letter');
-if (scoreElement) scoreElement.textContent = `Score: ${score}`;
-if (targetElement) targetElement.textContent = `Target: ${targetletter}`;
-
-// Socket event handlers for chat
-socketio.on('message', (data) => {
-    createmessage(data.name, data.message, data.type || 'normal');
-});
-
-// Socket event handlers for detector
-socketio.on('connect', function() {
-    console.log('Connected to server');
-});
-
-socketio.on('status', function(data) {
-    statusDiv.textContent = data.message + (data.model_loaded ? ' (Model Ready)' : ' (Demo Mode)');
-    statusDiv.className = 'status connected';
-    if (!data.model_loaded) {
-        statusDiv.textContent += ' - Model not available';
-    }
-});
-
-socketio.on('prediction_result', function(data) {
-    predictionDiv.textContent = data.prediction;
-    const confidencePercent = Math.round(data.confidence * 100);
-    confidenceDiv.textContent = confidencePercent + '%';
-    confidenceBar.style.width = confidencePercent + '%';
-
-    // Draw hand landmarks if available
-    if (data.landmarks && data.landmarks.length > 0) {
-        drawLandmarks(data.landmarks);
-    }
-
-    if (data.prediction === targetletter && confidencePercent >= 50) {
-        holdCounter += 1; // timer to hold the sign for some time
-    } else {
-        holdCounter = 0; // 4 x 300ms = 1200ms or 1.2 sec (see processingInterval)
-    }
-
-    if (holdCounter >= 4) {
-        score += 1;
-        holdCounter = 0;
-        targetletter = asl_classes[Math.floor(Math.random() * asl_classes.length)];
-        if (scoreElement) scoreElement.textContent = `Score: ${score}`;
-        if (targetElement) targetElement.textContent = `Target: ${targetletter}`;
-
-        socketio.emit('score_update', { score: score });
-    }
-});
-
-socketio.on('participants_updated', function(data) {
-    updateParticipantsList(data.participants);
-});
-
-socketio.on('error', function(data) {
-    console.error('Server error:', data.message);
-    statusDiv.textContent = 'Error: ' + data.message;
-    statusDiv.className = 'status disconnected';
-});
-
-socketio.on('disconnect', function() {
-    statusDiv.textContent = 'Disconnected from server';
-    statusDiv.className = 'status disconnected';
-});
-
-// New socket events for camera readiness
-socketio.on('camera_status_update', function(data) {
-    updateCameraStatusDisplay(data);
-});
-
-socketio.on('all_cameras_ready', function() {
-    allCamerasReady = true;
-    tryEnableStartGameButton();
-});
-
-socketio.on('waiting_for_cameras', function(data) {
-    // Only update start game button for room creator
-    if (window.isRoomCreator && startGameButton) {
-        startGameButton.disabled = true;
-        startGameButton.textContent = `Waiting for cameras (${data.ready}/${data.total})`;
-        startGameButton.style.backgroundColor = '#FFA500';
-    }
-});
-
-socketio.on('game_type_set', (data) => {
-    gameTypeSelected = true;
-    console.log("Game type is:", data.type);
-    document.getElementById('game-type-display').innerText = `Mode: ${data.type}`;
-    tryEnableStartGameButton();
-});
-
-socketio.on('start_game_signal', function () {
-    console.log('Game started signal received');
-    stopBtn.disabled=true
-    score = 0; // change this so that score turns zero AFTER saving to db
-    targetletter = asl_classes[Math.floor(Math.random() * asl_classes.length)];
-    if (targetElement) targetElement.textContent = `Target: ${targetletter}`;
-    if (scoreElement) scoreElement.textContent = `Score: ${score}`;
-    startProcessing();
-
-    let timeLeft = 10;
-    const timerDisplay = document.getElementById('timer');
-    timerDisplay.textContent = `Time: ${timeLeft}s`;
-
-    const countdown = setInterval(() => {
-    timeLeft--;
-    timerDisplay.textContent = `Time: ${timeLeft}s`;
-    
-    if (timeLeft <= 0) {
-        clearInterval(countdown);
-        stopProcessing();
-        stopBtn.disabled=false;
-        alert("Time's up!");
-        if (participate) {
-            document.getElementById('leaderboard').style.display = 'flex';
-        }
-        const gameTypeSelect = document.getElementById('game-type-select');
-        gameTypeSelect.style.display = 'flex';
-        gameTypeSelected = false;
-        if (startGameButton) {
-            startGameButton.disabled = false;
-        }
-        }
-    }, 2000);       // timer, 1000ms = 10 sec
-}); 
-
-socketio.on('leaderboard_update', function(data) {
-    // Add/update leaderboard
-    const list = document.getElementById('leaderboard-list');
-    const existingRows = list.getElementsByClassName('leaderboard-row');
-
-    let found = false;
-
-    // Check if the user already exists in the leaderboard
-    for (let row of existingRows) {
-        const usernameSpan = row.querySelector('.username');
-        if (usernameSpan && usernameSpan.textContent === data.username) {
-            // Update the score
-            const scoreSpan = row.querySelector('.score');
-            scoreSpan.textContent = data.score;
-            found = true;
-            break;
-        }
-    }
-
-    // If not found, add new row
-    if (!found) {
-        const newRow = document.createElement('div');
-        newRow.className = 'leaderboard-row';
-        newRow.innerHTML = `
-            <span class="username">${data.username}</span>
-            <span class="score">${data.score}</span>
-        `;
-        list.appendChild(newRow);
-    }
-
-    // Optionally: sort leaderboard descending by score
-    //sortLeaderboard();
-});
-
-function sortLeaderboard() {
-    const list = document.getElementById('leaderboard-list');
-    const rows = Array.from(list.getElementsByClassName('leaderboard-row'));
-
-    rows.sort((a, b) => {
-        const scoreA = parseInt(a.querySelector('.score').textContent);
-        const scoreB = parseInt(b.querySelector('.score').textContent);
-        return scoreB - scoreA; // descending
+function setupRoomSocketHandlers() {
+    // Socket event handlers for chat
+    socketio.on('message', (data) => {
+        createmessage(data.name, data.message, data.type || 'normal');
     });
 
-    // Re-add rows in sorted order
-    list.innerHTML = '';
-    rows.forEach((row, index) => {
-        // Optionally: add a ranking number before username
-        row.innerHTML = `
-            <span>${index + 1}</span>
-            ${row.innerHTML}
+    // Room-specific socket event handlers
+    socketio.on('participants_updated', function(data) {
+        updateParticipantsList(data.participants);
+    });
+
+    // Camera readiness handlers
+    socketio.on('camera_status_update', function(data) {
+        updateCameraStatusDisplay(data);
+    });
+
+    socketio.on('all_cameras_ready', function() {
+        allCamerasReady = true;
+        tryEnableStartGameButton();
+    });
+
+    socketio.on('waiting_for_cameras', function(data) {
+        if (window.isRoomCreator && startGameButton) {
+            startGameButton.disabled = true;
+            startGameButton.textContent = `Waiting for cameras (${data.ready}/${data.total})`;
+            startGameButton.style.backgroundColor = '#FFA500';
+        }
+    });
+
+    socketio.on('game_type_set', (data) => {
+        gameTypeSelected = true;
+        console.log("Game type is:", data.type);
+        document.getElementById('game-type-display').innerText = `Mode: ${data.type}`;
+        tryEnableStartGameButton();
+    });
+
+    socketio.on('start_game_signal', function () {
+        console.log('Game started signal received');
+        const stopBtn = document.getElementById('stopBtn');
+        if (stopBtn) stopBtn.disabled = true;
+        
+        // Reset game state using detector
+        detector.resetScore();
+        detector.startProcessing();
+
+        let timeLeft = 10;
+        const timerDisplay = document.getElementById('timer');
+        timerDisplay.textContent = `Time: ${timeLeft}s`;
+
+        const countdown = setInterval(() => {
+            timeLeft--;
+            timerDisplay.textContent = `Time: ${timeLeft}s`;
+            
+            if (timeLeft <= 0) {
+                clearInterval(countdown);
+                detector.stopProcessing();
+                if (stopBtn) stopBtn.disabled = false;
+                alert("Time's up!");
+                
+                if (participate) {
+                    document.getElementById('leaderboard').style.display = 'flex';
+                }
+                
+                const gameTypeSelect = document.getElementById('game-type-select');
+                gameTypeSelect.style.display = 'flex';
+                gameTypeSelected = false;
+                
+                if (startGameButton) {
+                    startGameButton.disabled = false;
+                }
+            }
+        }, 1000); // timer, 1000ms = 1 sec intervals for 10 second game
+    }); 
+
+    socketio.on('leaderboard_update', function(data) {
+        const list = document.getElementById('leaderboard-list');
+        const existingRows = list.getElementsByClassName('leaderboard-row');
+
+        let found = false;
+
+        // Check if the user already exists in the leaderboard
+        for (let row of existingRows) {
+            const usernameSpan = row.querySelector('.username');
+            if (usernameSpan && usernameSpan.textContent === data.username) {
+                // Update the score
+                const scoreSpan = row.querySelector('.score');
+                scoreSpan.textContent = data.score;
+                found = true;
+                break;
+            }
+        }
+
+        // If not found, add new row
+        if (!found) {
+            const newRow = document.createElement('div');
+            newRow.className = 'leaderboard-row';
+            newRow.innerHTML = `
+                <span class="username">${data.username}</span>
+                <span class="score">${data.score}</span>
+            `;
+            list.appendChild(newRow);
+        }
+    });
+
+    socketio.on('room_deleted_by_creator', function(data) {
+        console.log('Room deleted by creator:', data.message);
+        
+        // Create a custom notification div
+        const notification = document.createElement('div');
+        notification.innerHTML = `
+            <div style="
+                position: fixed; 
+                top: 50%; 
+                left: 50%; 
+                transform: translate(-50%, -50%); 
+                background: white; 
+                border: 2px solid #ccc; 
+                padding: 20px; 
+                border-radius: 10px; 
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+                z-index: 10000;
+                text-align: center;
+                max-width: 400px;
+            ">
+                <h3>🚪 Room Closed</h3>
+                <p>${data.message}</p>
+                <button onclick="this.parentElement.parentElement.remove(); window.location.href='/home/';" 
+                        style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    OK
+                </button>
+            </div>
+            <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999;"></div>
         `;
-        list.appendChild(row);
+        
+        // Cleanup detector immediately
+        if (detector) {
+            detector.stopCamera();
+        }
+        
+        document.body.appendChild(notification);
+        
+        // Auto-redirect after 5 seconds if user doesn't click OK
+        setTimeout(() => {
+            window.location.href = '/home/';
+        }, 5000);
     });
 }
 
+// Room-specific functions
 function participate_btn() {
     document.getElementById('creator-participate').style.display = 'none';
 }
 
 function notparticipate_btn() {
     participate = false;
-    startBtn.disabled = true;
-    stopBtn.disabled = true;
+    detector.setParticipation(false);
+    
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    if (startBtn) startBtn.disabled = true;
+    if (stopBtn) stopBtn.disabled = true;
+    
     document.getElementById('creator-participate').style.display = 'none';
     socketio.emit('camera_ready');
     console.log('Camera ready event sent to server');
@@ -287,61 +259,6 @@ document.getElementById("message").addEventListener("keypress", function(event) 
     }
 });
 
-// Camera functions - These should work for ALL users
-async function startCamera() {
-    console.log('Starting camera...');
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                width: { ideal: 640 },
-                height: { ideal: 480 },
-                facingMode: 'user'
-            }
-        });
-        videoElement.srcObject = stream;
-
-        videoElement.onloadedmetadata = function() {
-            canvas.width = videoElement.videoWidth;
-            canvas.height = videoElement.videoHeight;
-            isCameraReady = true;
-            
-            // Notify server that camera is ready
-            socketio.emit('camera_ready');
-            console.log('Camera ready event sent to server');
-        };
-
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-
-        console.log('Camera started successfully');
-    } catch (error) {
-        console.error('Error accessing camera:', error);
-        alert('Could not access camera. Please ensure camera permissions are granted.');
-    }
-}
-
-function stopCamera() {
-    console.log('Stopping camera...');
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-    }
-
-    videoElement.srcObject = null;
-    stopProcessing();
-    isCameraReady = false;
-
-    startBtn.disabled = false;
-    stopBtn.disabled = true;
-
-    // Notify server that camera is stopped
-    socketio.emit('camera_stopped');
-    console.log('Camera stopped event sent to server');
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    console.log('Camera stopped');
-}
-
 function submitGameType() {
     const selectedType = document.getElementById('gameType').value;
     socketio.emit('set_game_type', { type: selectedType });
@@ -362,93 +279,6 @@ function startGame() {
     socketio.emit('start_game');
 }
 
-function startProcessing() {
-    console.log('Starting processing...');
-    if (participate) {
-        if (!stream) {
-        alert('Please start the camera first');
-        return;
-    }
-
-    isProcessing = true;
-
-    processingInterval = setInterval(() => {
-        captureAndSendFrame();
-    }, 300); // callbacks every 300 ms
-
-    console.log('Processing started');
-    }
-}
-
-function stopProcessing() {
-    console.log('Stopping processing...');
-    isProcessing = false;
-    if (processingInterval) {
-        clearInterval(processingInterval);
-        processingInterval = null;
-    }
-
-    predictionDiv.textContent = 'No gesture';
-    confidenceDiv.textContent = '0%';
-    confidenceBar.style.width = '0%';
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    console.log('Processing stopped');
-}
-
-function captureAndSendFrame() {
-    if (!videoElement.videoWidth || !videoElement.videoHeight) return;
-
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCanvas.width = videoElement.videoWidth;
-    tempCanvas.height = videoElement.videoHeight;
-
-    tempCtx.scale(-1, 1);
-    tempCtx.drawImage(videoElement, -tempCanvas.width, 0);
-
-    const imageData = tempCanvas.toDataURL('image/jpeg', 0.8);
-    socketio.emit('process_frame_room', { image: imageData });
-}
-
-function drawLandmarks(landmarks) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    landmarks.forEach(hand => {
-        const points = hand.points;
-        const connections = hand.connections;
-
-        ctx.strokeStyle = '#00FF00';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-
-        connections.forEach(([start, end]) => {
-            const startPoint = points[start];
-            const endPoint = points[end];
-
-            const startX = startPoint[0] * canvas.width;
-            const startY = startPoint[1] * canvas.height;
-            const endX = endPoint[0] * canvas.width;
-            const endY = endPoint[1] * canvas.height;
-
-            ctx.moveTo(startX, startY);
-            ctx.lineTo(endX, endY);
-        });
-
-        ctx.stroke();
-
-        ctx.fillStyle = '#FF0000';
-        points.forEach(point => {
-            const x = point[0] * canvas.width;
-            const y = point[1] * canvas.height;
-
-            ctx.beginPath();
-            ctx.arc(x, y, 3, 0, 2 * Math.PI);
-            ctx.fill();
-        });
-    });
-}
-
 function updateCameraStatusDisplay(data) {
     console.log('Camera status update:', data);
 
@@ -463,42 +293,41 @@ function updateCameraStatusDisplay(data) {
     tryEnableStartGameButton();
 }
 
-// aggressive exit function
+// Aggressive exit function
 function exitroom() {
     console.log('Immediate exit initiated...');
-    if (isProcessing) {
-        stopProcessing();
-    }
     
-    // Clear any intervals
-    if (processingInterval) {
-        clearInterval(processingInterval);
-        processingInterval = null;
-    }
-
-    try {
-        socketio.disconnect();
-        window.location.href = '/home/';
+    // If this is the room creator, notify server to delete room and kick everyone
+    if (window.isRoomCreator) {
+        console.log('Room creator leaving - room will be deleted');
+        socketio.emit('room_creator_leaving');
         
-    } catch (error) {
-        console.error('Error during disconnect:', error);
-        window.location.href = '/home/';
+        // Give a brief moment for the server to process before disconnecting
+        setTimeout(() => {
+            if (detector) {
+                detector.stopCamera();
+            }
+            try {
+                socketio.disconnect();
+                window.location.href = '/home/';
+            } catch (error) {
+                console.error('Error during disconnect:', error);
+                window.location.href = '/home/';
+            }
+        }, 100);
+    } else {
+        // Regular participant leaving
+        if (detector) {
+            detector.stopCamera();
+        }
+        try {
+            socketio.disconnect();
+            window.location.href = '/home/';
+        } catch (error) {
+            console.error('Error during disconnect:', error);
+            window.location.href = '/home/';
+        }
     }
-}
-
-
-// Event listeners - These should work for ALL users
-if (startBtn) {
-    startBtn.addEventListener('click', function() {
-        console.log('Start camera button clicked');
-        startCamera();
-    });
-}
-if (stopBtn) { // these type of codes are to verify if the button is in the html (e.g. in the creator but not in user)
-    stopBtn.addEventListener('click', function() {
-        console.log('Stop camera button clicked');
-        stopCamera();
-    });
 }
 
 // Start game button - only for room creators
@@ -515,7 +344,14 @@ if (startGameButton) {
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', function() {
-    stopCamera();
+    // If room creator is leaving (page refresh/close), notify server
+    if (window.isRoomCreator && socketio && socketio.connected) {
+        socketio.emit('room_creator_leaving');
+    }
+    
+    if (detector) {
+        detector.stopCamera();
+    }
 });
 
 console.log('Room with Sign Language Detection initialized');

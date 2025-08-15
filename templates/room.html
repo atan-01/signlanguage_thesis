@@ -47,6 +47,7 @@
                 </div>
             </div>
         </div>
+        
         <div class="room-participants">
             <h3>Participants:</h3>
             <ul id="participantList">
@@ -125,7 +126,7 @@
 
     <script>
         // Set room creator status BEFORE loading room.js
-        window.isRoomCreator = document.body.dataset.isRoomCreator === "true";
+        window.isRoomCreator = document.body.dataset.isRoomCreator === "true"; //turns string to bool
         const createmessage = (name, msg, type = 'normal') => {
             const content = `
             <div class="text">
@@ -166,7 +167,9 @@
         }
     </script>
     
-    <!-- Load room.js AFTER setting window.isRoomCreator -->
+    <!-- Load the unified module first -->
+    <script src="{{ url_for('static', filename='js/signLanguageDetector.js') }}" defer></script>
+    <!-- Load room.js AFTER setting window.isRoomCreator and loading unified module -->
     <script src="{{ url_for('static', filename='js/room.js') }}" defer></script>
     
     {% for msg in messages %}

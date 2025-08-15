@@ -4,10 +4,11 @@ from dotenv import load_dotenv
 import os
 from supabase import create_client, Client
 from auth import auth_bp
-from translator import translator_bp, register_detection_socketio_events, detector
+from translator import translator_bp, detector  # Remove the socketio imports
 from home import home_bp
-from room import room_bp, init_socketio
+from room import room_bp  # Remove init_socketio import
 from learn import learn_bp
+from socketio_events import init_all_socketio_events  # Import centralized events
     
 # Load environment variables, access .env file
 load_dotenv()
@@ -32,17 +33,15 @@ def create_app():
     socketio = SocketIO(app, cors_allowed_origins="*")
     
     # Register blueprints
- 
     app.register_blueprint(auth_bp)
     app.register_blueprint(translator_bp)
     app.register_blueprint(home_bp)
     app.register_blueprint(room_bp)
     app.register_blueprint(learn_bp)
     
-    # Initialize SocketIO events for translator
-    init_socketio(socketio, supabase, detector)
-    register_detection_socketio_events(socketio, supabase, detector)
-
+    # Initialize ALL SocketIO events in one place
+    init_all_socketio_events(socketio, supabase, detector)
+    
     return app, socketio
 
 if __name__ == '__main__':

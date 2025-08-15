@@ -6,6 +6,9 @@
     <title>Sign Language Detection</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main_hand.css') }}">
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js" defer></script>
+    <!-- Load the unified module first -->
+    <script src="{{ url_for('static', filename='js/signLanguageDetector.js') }}" defer></script>
+    <!-- Then load the main-specific script -->
     <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
 </head>
 <body>

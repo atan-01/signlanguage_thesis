@@ -1,13 +1,9 @@
 from flask import Blueprint, render_template, session, redirect, url_for, current_app
-from flask_socketio import emit
 import cv2
 import mediapipe as mp
 import pickle
 import numpy as np
 from collections import deque
-import base64
-import io
-from PIL import Image
 import os
 
 # Create blueprint
@@ -211,23 +207,3 @@ def main():
         return redirect(url_for('auth.index'))
     
     return render_template('main_hand.html', user=user_data)
-
-# SocketIO Events
-def register_detection_socketio_events(socketio, supabase, detector):
-    @socketio.on('process_frame')
-    def handle_frame(data):
-        print("Received frame for processing")
-        try:
-            image_data = data['image'].split(',')[1]
-            image_bytes = base64.b64decode(image_data)
-            
-            image = Image.open(io.BytesIO(image_bytes))
-            frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-            
-            result = detector.process_frame(frame)
-            
-            emit('prediction_result', result)
-            
-        except Exception as e:
-            print(f"Error processing frame: {e}")
-            emit('error', {'message': str(e)})
