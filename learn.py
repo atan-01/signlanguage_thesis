@@ -1,6 +1,5 @@
 from flask import Blueprint, render_template, session, redirect, url_for, current_app
 
-
 learn_bp = Blueprint('learn', __name__, url_prefix='/learn')
 
 def get_user_by_id(user_id):
@@ -35,8 +34,22 @@ def learn_category(category):
     if not user_data: 
         return redirect(url_for('auth.index'))
 
-    valid_categories = ['alphabet', 'numbers', 'words']
+    valid_categories = ['alphabet', 'number', 'words']
     if category not in valid_categories:
         return "Page not found", 404
 
-    return render_template('learning_materials.html', category=category)
+    # Query Supabase for items
+    supabase = current_app.config['SUPABASE']
+    try:
+        response = supabase.table("learning_materials") \
+            .select('"class", instruction, image_path') \
+            .eq("category", category) \
+            .order("class") \
+            .execute()
+        items = [{"class": row["class"], "instruction": row["instruction"], "image_path": row["image_path"]} for row in response.data]
+        print(f"Fetched items for {category}: {items}")  # Debugging
+    except Exception as e:
+        print(f"Error fetching learning materials: {e}")
+        items = []
+
+    return render_template('learning_materials.html', category=category, items=items)

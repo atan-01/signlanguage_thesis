@@ -1,15 +1,26 @@
 body {
-    background-image: url('../images/Categories.png');
-    background-size: fit;    /* scale image to fill button */
-    background-position: center;
-    background-repeat: no-repeat;
-    margin: 0;
-    padding: 0;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-family: sans-serif;
+  background-image: url('../images/Categories.png');
+  background-size: fit;    /* scale image to fill button */
+  background-position: center;
+  background-repeat: no-repeat;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-family: sans-serif;
+}
+
+.logo {
+  position: absolute;
+  top: 2vh;
+  left: 2vw;
+  width: clamp(80px, 12vw, 160px);
+  height: auto;
+  z-index: 10;
+  filter: brightness(0) invert(1);
 }
 
 .button-wrapper {
@@ -18,11 +29,14 @@ body {
   flex-wrap: wrap; /* allow wrapping on smaller screens */
   justify-content: center;
   align-items: center;
+  column-gap: 40px;       /* only horizontal gap */
+  row-gap: 0;
+  padding-top: 3vh;             
 }
 
 .icon-button {
-  width: 220px;              /* or whatever size you want */
-  height: 430px;
+  width: 15vw;              /* or whatever size you want */
+  height: 45vh;
   background-size: contain;    /* scale image to fill button */
   background-position: center;
   background-repeat: no-repeat;
@@ -49,12 +63,25 @@ body {
   background-image: url('../images/words.png');
 }
 
+
+.top-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 70vw;
+}
+
 .categories {
-    position: fixed;
-    top: 100px;
-    left: 100px;
-    font-size: 60px;
+    top: 14vh;
+    font-size: 8.2vh;
     color: white;
-    font-family: "Baloo 2", sans-serif;
-    font-weight: 600;
+    font-family: "Gantari", sans-serif;
+    font-weight: 800;
+}
+
+.back {
+  color: white;
+  top: 20vh;
+  font-family: "Gantari", sans-serif;
+
 }

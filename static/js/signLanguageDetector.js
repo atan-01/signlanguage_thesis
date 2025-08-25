@@ -7,6 +7,7 @@ class SignLanguageDetector {
             socketNamespace: config.socketNamespace || '',
             isRoomMode: config.isRoomMode || false,
             enableGameLogic: config.enableGameLogic || false,
+            enableLearningMode: config.enableLearningMode || false,
             enableFpsCounter: config.enableFpsCounter || false,
             useExistingSocket: config.useExistingSocket || false,
             ...config
@@ -36,6 +37,15 @@ class SignLanguageDetector {
             this.asl_classes = Object.values(this.customClassNames);
             this.targetletter = this.asl_classes[Math.floor(Math.random() * this.asl_classes.length)];
             this.updateGameUI();
+        }
+
+        // Learning mode variables
+        if (this.config.enableLearningMode) {
+            this.learningTarget = null; // Will be set externally
+            this.learningHoldCounter = 0;   // track how long the user continuously holds the correct sign.
+            this.learningSuccessThreshold = 4; // 4 * 300ms = 1200ms hold time (the hold time)
+            this.learningConfidenceThreshold = 50; // 50% confidence minimum
+            this.hasShownSuccess = false; // Prevent multiple alerts for same target
         }
 
         // Socket connection - use existing socket if provided, otherwise create new one
@@ -185,8 +195,8 @@ class SignLanguageDetector {
         });
     }
 
-    async startCamera() {
-        console.log('Starting camera...');
+    async startCamera() {   // async = lets you can use 'await'
+        console.log('Starting camera...'); 
         try {
             this.stream = await navigator.mediaDevices.getUserMedia({
                 video: {
@@ -367,9 +377,14 @@ class SignLanguageDetector {
             this.drawLandmarks(data.landmarks);
         }
 
-        // Handle game logic if enabled
+        // Handle game logic if enabled (ROOM MODE)
         if (this.config.enableGameLogic) {
             this.handleGameLogic(data.prediction, confidencePercent);
+        }
+
+        // Handle learning mode logic if enabled
+        if (this.config.enableLearningMode) {
+            this.handleLearningLogic(data.prediction, confidencePercent);
         }
 
         // Call custom prediction handler if provided
@@ -396,6 +411,91 @@ class SignLanguageDetector {
                 this.socketio.emit('score_update', { score: this.score });
             }
         }
+    }
+
+    // Handle learning mode logic
+    handleLearningLogic(prediction, confidencePercent) {
+        if (!this.learningTarget) {
+            return; // No target set yet
+        }
+
+        // Check if prediction matches target with sufficient confidence
+        if (prediction === this.learningTarget && confidencePercent >= this.learningConfidenceThreshold) {
+            this.learningHoldCounter += 1;
+        } else {
+            this.learningHoldCounter = 0;
+            this.hasShownSuccess = false; // Reset success flag when not matching
+        }
+
+        // If held long enough and haven't shown success yet
+        if (this.learningHoldCounter >= this.learningSuccessThreshold && !this.hasShownSuccess) {
+            this.showLearningSuccess();
+            this.hasShownSuccess = true; // Prevent multiple alerts for same target
+            this.learningHoldCounter = 0; // Reset counter
+        }
+    }
+
+    // NEW: Show learning success notification
+    showLearningSuccess() {
+        // Create a nice success notification
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 10000;
+            font-size: 16px;
+            font-weight: bold;
+            font-family: "Gantari", sans-serif;
+            animation: slideIn 0.3s ease-out;
+        `;
+        
+        notification.innerHTML = `
+            🎉 Well Done! 
+            <br>
+            <small>You performed "${this.learningTarget}" correctly!</small>
+        `;
+        
+        // Add animation keyframes if not already added
+        if (!document.getElementById('learningSuccessStyles')) {
+            const style = document.createElement('style');
+            style.id = 'learningSuccessStyles';
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOut {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(notification);
+        
+        // Remove notification after 3 seconds
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+        
+        // Also trigger custom callback if provided
+        if (this.config.onLearningSuccess) {
+            this.config.onLearningSuccess(this.learningTarget);
+        }
+        
+        console.log(`Learning success: ${this.learningTarget} performed correctly!`);
     }
 
     updateGameUI() {
@@ -506,6 +606,34 @@ class SignLanguageDetector {
 
     getTargetLetter() {
         return this.targetletter;
+    }
+
+    // Learning mode methods
+    setLearningTarget(target) {
+        if (this.config.enableLearningMode) {
+            this.learningTarget = target;
+            this.learningHoldCounter = 0;
+            this.hasShownSuccess = false;
+            console.log(`Learning target set to: ${target}`);
+        }
+    }
+
+    getLearningTarget() {
+        return this.learningTarget;
+    }
+
+    setLearningThresholds(holdTime = 4, confidence = 50) {
+        if (this.config.enableLearningMode) {
+            this.learningSuccessThreshold = holdTime;
+            this.learningConfidenceThreshold = confidence;
+        }
+    }
+
+    resetLearningState() {
+        if (this.config.enableLearningMode) {
+            this.learningHoldCounter = 0;
+            this.hasShownSuccess = false;
+        }
     }
 
     // Cleanup method

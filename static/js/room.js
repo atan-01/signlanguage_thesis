@@ -1,4 +1,3 @@
-// room.js - Updated to use shared socket connection
 let detector;
 let allCamerasReady = false;
 let gameTypeSelected = false;
@@ -182,8 +181,7 @@ function setupRoomSocketHandlers() {
                     OK
                 </button>
             </div>
-            <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999;"></div>
-        `;
+            <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999;"></div>`;
         
         // Cleanup detector immediately
         if (detector) {

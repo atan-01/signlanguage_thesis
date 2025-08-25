@@ -4,22 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/learn.css') }}">
-    <title>Document</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@100..700&family=Baloo+2:wght@400..800&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@100..700&family=Baloo+2:wght@400..800&family=Gantari:ital,wght@0,100..900;1,100..900&family=Mynerve&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <title>Document</title>
 </head>
 <body>
-  <span class="categories"> Categories </span>
+  <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="logo" onclick="back()">
+  <div class="top-wrapper">
+      <span class="categories"> Categories </span>
+      <span class="back" onclick="back()"> ↵ Back to Homepage </span>
+  </div>
   <div class="button-wrapper">
     <button class="icon-button alphabet-btn" onclick="gotocategory('alphabet')"></button>
-    <button class="icon-button numbers-btn" onclick="gotocategory('numbers')"></button>
+    <button class="icon-button numbers-btn" onclick="gotocategory('number')"></button>
     <button class="icon-button words-btn" onclick="gotocategory('words')"></button>
   </div>
 </body>
 <script>
   function gotocategory(category) {
     window.location.href = `/learn/${category}`;
+  }
+  function back() {
+    window.location.href = '/home/';
   }
 </script>
 </html>

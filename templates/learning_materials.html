@@ -4,37 +4,86 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/learning_materials.css') }}">
+    <script src="{{ url_for('static', filename='js/signLanguageDetector.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/learning_materials.js') }}" defer></script>
-    <title>Document</title>
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@100..700&family=Baloo+2:wght@400..800&family=Gantari:ital,wght@0,100..900;1,100..900&family=Mynerve&family=Outfit:wght@100..900&display=swap" rel="stylesheet">    <title>Document</title>
 </head>
-<body>
-    <h1>{{ category.title() }}</h1>
-
-    {% if category == 'alphabet' %}
-        <p>This is where you teach the ASL Alphabet.</p>
-
-        <div class="learn-mats-buttons">
-            {% for letter in 'ABCDEFGHIKLMNOPQRSTUVWXY' %}
-                <button class="class-btn" onclick="matcontent('{{ letter }}')">{{ letter }}</button>
-            {% endfor %}
+<body >
+    <div class="content-to-blur" id="main-content">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="logo" onclick="back()">
+        <div class="top-wrapper">
+            <h1 class="category">{{ category.title() }}</h1> <!-- .title() = makes first letter uppercase, rest lower case-->
+            <span class="back" onclick="back()"> ↵ Back </span>
         </div>
-    {% elif category == 'numbers' %}
-        <p>This is where you teach ASL Numbers.</p>
 
-        <div class="learn-mats-buttons">
-            {% for number in '123456789' %}
-                <button class="class-btn" onclick="matcontent('{{ number }}')">{{ number }}</button>
-            {% endfor %}
+        <div class="classes-parent">
+            <div class="classes">
+                {% if category == 'alphabet' %}
+                    {% for letter in items %}
+                        <div class="learn-mats-buttons">
+                            <button class="class-btn" onclick="matcontent('{{ letter.class }}', '{{ letter.instruction}}', '{{ letter.image_path}}', '{{ category.title() }}')">{{ letter.class }}</button>
+                        </div>
+                    {% endfor %}
+                {% elif category == 'number' %}
+                    {% for number in items %}
+                        <div class="learn-mats-buttons">
+                            <button class="class-btn" onclick="matcontent('{{ number.class }}', '{{ number.instruction}}', '{{ number.image_path}}', '{{ category.title() }}')">{{ number.class }}</button>
+                        </div>
+                    {% endfor %}
+                {% elif category == 'words' %}
+                    <p>This is where you teach Common ASL Words.</p>
+                {% endif %}
+            </div>
         </div>
-    {% elif category == 'words' %}
-        <p>This is where you teach Common ASL Words.</p>
-    {% endif %}
 
-    <div class="learning-content" id="learning-content">
-        <div class="contents" id="contents">
-            content
+
+    </div>
+
+    <!-- Blur overlay -->
+    <div class="blur-overlay" id="blur-overlay"></div>
+
+    <!-- class content --->
+    <div class="class-content" id="class-content">
+        <div class="class-upper">
+            <div class="class-text">
+                <div class="specific-class" id="specific-class"></div>
+                <div class="instruction" id="instruction"></div>
+            </div> 
+            <div class="class_image" id="class_image"></div>
         </div>
-        <button class="content-close" onclick="closecontent()"> Close </button>
+        <div class="class-buttons">
+            <button class="content-close" onclick="closecontent()"> Close </button>
+            <button class="tryityourself" onclick="tryityourself()"> Try it yourself </button>
+            <button class="content-next" onclick="next()"> Next </button>
+        </div>
+    </div>
+
+    <!-- detector content -->
+    <div class="learning-content" id="learning-content"> 
+        <h3 class="detector-header" id="detector-header"></h3>
+
+        <div class="video-container">
+            <video id="videoElement" autoplay muted></video>
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <!-- Camera controls - available for ALL users -->
+
+        <div class="detection-results">
+            <div class="result-item">
+                <strong>Detected:</strong> <span id="prediction">No gesture</span>
+            </div>
+            <div class="result-item">
+                <strong>Confidence:</strong> <span id="confidence">0%</span>
+            </div>
+            <div class="confidence-bar">
+                <div id="confidenceBar" class="confidence-fill" style="width: 0%"></div>
+            </div>
+        </div>
+        <button class="content-close" onclick="closedetector()"> Close </button>
     </div>
 </body>
 </html>

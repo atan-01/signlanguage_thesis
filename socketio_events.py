@@ -268,99 +268,6 @@ def init_all_socketio_events(socketio, supabase, detector=None):
             print(f"Error processing frame in learn: {e}")
             emit('error', {'message': str(e)})
 
-    # ===== GENERAL EVENTS =====
-    @socketio.on('message')
-    def handle_message(data):
-        room = session.get("room")
-        if room not in rooms:
-            return
-        
-        content = {
-            "name": session.get("name"),
-            "message": data["data"]
-        }
-        send(content, to=room)
-        rooms[room]["messages"].append(content)
-        print(f"{session.get('name')} said: {data['data']}")
-
-    @socketio.on('camera_ready')
-    def handle_camera_ready():
-        user_id = session.get('user_id')
-        room = session.get('room')
-        
-        if not user_id or not room or room not in rooms:
-            return
-            
-        if "camera_status" not in rooms[room]:
-            rooms[room]["camera_status"] = {}
-            
-        rooms[room]["camera_status"][user_id]["camera_ready"] = True
-        
-        user_data = get_user_by_id(user_id)
-        if user_data:
-            print(f"{user_data['username']} camera is ready in room {room}")
-            
-        check_camera_readiness(room, rooms)
-
-    @socketio.on('camera_stopped')
-    def handle_camera_stopped():
-        user_id = session.get('user_id')
-        room = session.get('room')
-        
-        if not user_id or not room or room not in rooms:
-            return
-            
-        if "camera_status" in rooms[room] and user_id in rooms[room]["camera_status"]:
-            rooms[room]["camera_status"][user_id]["camera_ready"] = False
-            
-        user_data = get_user_by_id(user_id)
-        if user_data:
-            print(f"{user_data['username']} camera stopped in room {room}")
-            
-        check_camera_readiness(room, rooms)
-
-    @socketio.on('set_game_type')
-    def handle_game_type(data):
-        room = session.get("room")
-        game_type = data.get('type')
-        if room and room in rooms:
-            rooms[room]['game_type'] = game_type
-            emit('game_type_set', {'type': game_type}, room=room)
-
-    @socketio.on('start_game')
-    def handle_start_game():
-        user_id = session.get('user_id')
-        room = session.get('room')
-        
-        if not user_id or not room or room not in rooms:
-            return
-            
-        # Check if all cameras are ready before starting
-        if "camera_status" not in rooms[room]:
-            emit('error', {'message': 'Camera status not initialized'})
-            return
-            
-        camera_status = rooms[room]["camera_status"]
-        total_users = len(camera_status)
-        ready_users = sum(1 for status in camera_status.values() if status["camera_ready"])
-        
-        if ready_users == total_users and total_users > 0:
-            emit('start_game_signal', room=room)
-            print(f"Game started in room {room}")
-        else:
-            emit('error', {'message': f'Not all cameras ready. {ready_users}/{total_users} ready.'})
-
-    @socketio.on('score_update')
-    def handle_score_update(data):
-        user_id = session.get('user_id')
-        user_data = get_user_by_id(user_id)
-        username = user_data['username']
-        room = session.get("room")
-        score = data.get("score")
-
-        if room and username:
-            emit('leaderboard_update', {'username': username, 'score': score}, room=room)
-
     # ===== TRANSLATOR-SPECIFIC EVENTS =====
     # These events are for the general translator functionality
     @socketio.on('join_translator')
@@ -394,7 +301,7 @@ def init_all_socketio_events(socketio, supabase, detector=None):
     @socketio.on('process_frame_translator')
     def handle_translator_frame(data):
         """Handle sign language detection for general translator use"""
-        print("Received frame for processing in translator")
+        #print("Received frame for processing in translator")
         if not detector:
             emit('error', {'message': 'Detector not available'})
             return
@@ -435,57 +342,6 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         except Exception as e:
             print(f"Error processing frame: {e}")
             emit('error', {'message': str(e)})
-
-    @socketio.on('process_frame_room')
-    def handle_room_frame(data):
-        """Handle sign language detection in room context"""
-        room = session.get("room")
-        if not room or room not in rooms or not detector:
-            emit('error', {'message': 'Room not found or detector not available'})
-            return
-            
-        try:
-            image_data = data['image'].split(',')[1]
-            image_bytes = base64.b64decode(image_data)
-            
-            image = Image.open(io.BytesIO(image_bytes))
-            frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-            
-            result = detector.process_frame(frame)
-            emit('prediction_result', result)
-            
-        except Exception as e:
-            print(f"Error processing frame in room: {e}")
-            emit('error', {'message': str(e)})
-
-    # Translation-specific events for other parts of the app
-    @socketio.on('join_translator')
-    def handle_join_translator():
-        """Join a general translator session"""
-        user_id = session.get('user_id')
-        if not user_id:
-            return False
-            
-        user_data = get_user_by_id(user_id)
-        if not user_data:
-            return False
-            
-        # Create a personal translator room for the user
-        translator_room = f"translator_{user_id}"
-        join_room(translator_room)
-        
-        model_loaded = detector.model_loaded if detector else False
-        emit('status', {'message': 'Connected to translator', 'model_loaded': model_loaded})
-        print(f"User {user_data['username']} joined translator")
-
-    @socketio.on('leave_translator')
-    def handle_leave_translator():
-        """Leave translator session"""
-        user_id = session.get('user_id')
-        if user_id:
-            translator_room = f"translator_{user_id}"
-            leave_room(translator_room)
-            print(f"User left translator session")
 
     @socketio.on('room_creator_leaving')
     def handle_room_creator_leaving():
