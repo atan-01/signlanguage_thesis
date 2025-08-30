@@ -66,6 +66,9 @@ async function tryityourself() {
         if (currentclass) {
             detector.setLearningTarget(currentclass);
             console.log(`Learning target set to: ${currentclass}`);
+
+            // Reset the detector display to show we're looking for the target
+
         }
 
         await detector.startCamera();

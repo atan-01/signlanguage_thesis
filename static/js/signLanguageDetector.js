@@ -43,7 +43,7 @@ class SignLanguageDetector {
         if (this.config.enableLearningMode) {
             this.learningTarget = null; // Will be set externally
             this.learningHoldCounter = 0;   // track how long the user continuously holds the correct sign.
-            this.learningSuccessThreshold = 4; // 4 * 300ms = 1200ms hold time (the hold time)
+            this.learningSuccessThreshold = 10; // 4 * 300ms = 1200ms hold time (the hold time)
             this.learningConfidenceThreshold = 50; // 50% confidence minimum
             this.hasShownSuccess = false; // Prevent multiple alerts for same target
         }
@@ -358,33 +358,64 @@ class SignLanguageDetector {
     }
 
     handlePredictionResult(data) {
-        // Update prediction display
-        if (this.elements.predictionDiv) {
-            this.elements.predictionDiv.textContent = data.prediction;
-        }
-        
-        // Update confidence display
-        const confidencePercent = Math.round(data.confidence * 100);
-        if (this.elements.confidenceDiv) {
-            this.elements.confidenceDiv.textContent = confidencePercent + '%';
-        }
-        if (this.elements.confidenceBar) {
-            this.elements.confidenceBar.style.width = confidencePercent + '%';
+        // For learning mode, only show results for the target class
+        if (this.config.enableLearningMode && this.learningTarget) {
+            // Only update display if the prediction matches the learning target
+            if (data.prediction === this.learningTarget) {
+                // Update prediction display
+                if (this.elements.predictionDiv) {
+                    this.elements.predictionDiv.textContent = data.prediction;
+                }
+                
+                // Update confidence display
+                const confidencePercent = Math.round(data.confidence * 100);
+                if (this.elements.confidenceDiv) {
+                    this.elements.confidenceDiv.textContent = confidencePercent + '%';
+                }
+                if (this.elements.confidenceBar) {
+                    this.elements.confidenceBar.style.width = confidencePercent + '%';
+                }
+            } else {
+                // Show that we're looking for the target class but not detecting it
+                if (this.elements.predictionDiv) {
+                    this.elements.predictionDiv.textContent = `${this.learningTarget}`;
+                }
+                if (this.elements.confidenceDiv) {
+                    this.elements.confidenceDiv.textContent = '0%';
+                }
+                if (this.elements.confidenceBar) {
+                    this.elements.confidenceBar.style.width = '0%';
+                }
+            }
+            
+            // Handle learning logic with original prediction data
+            this.handleLearningLogic(data.prediction, Math.round(data.confidence * 100));
+            
+        } else {
+            // Normal mode - show all predictions
+            // Update prediction display
+            if (this.elements.predictionDiv) {
+                this.elements.predictionDiv.textContent = data.prediction;
+            }
+            
+            // Update confidence display
+            const confidencePercent = Math.round(data.confidence * 100);
+            if (this.elements.confidenceDiv) {
+                this.elements.confidenceDiv.textContent = confidencePercent + '%';
+            }
+            if (this.elements.confidenceBar) {
+                this.elements.confidenceBar.style.width = confidencePercent + '%';
+            }
+            
+            // Handle game logic if enabled (ROOM MODE)
+            if (this.config.enableGameLogic) {
+                this.handleGameLogic(data.prediction, confidencePercent);
+            }
         }
 
-        // Draw hand landmarks if available
+        // Draw hand landmarks if available (always show these)
         if (data.landmarks && data.landmarks.length > 0 && this.ctx) {
             this.drawLandmarks(data.landmarks);
-        }
-
-        // Handle game logic if enabled (ROOM MODE)
-        if (this.config.enableGameLogic) {
-            this.handleGameLogic(data.prediction, confidencePercent);
-        }
-
-        // Handle learning mode logic if enabled
-        if (this.config.enableLearningMode) {
-            this.handleLearningLogic(data.prediction, confidencePercent);
         }
 
         // Call custom prediction handler if provided
@@ -392,6 +423,7 @@ class SignLanguageDetector {
             this.config.onPrediction(data);
         }
     }
+
 
     handleGameLogic(prediction, confidencePercent) {
         if (prediction === this.targetletter && confidencePercent >= 50) {
@@ -486,6 +518,9 @@ class SignLanguageDetector {
             setTimeout(() => {
                 if (notification.parentNode) {
                     notification.parentNode.removeChild(notification);
+                }
+                if (typeof closedetector === 'function') {
+                    closedetector();
                 }
             }, 300);
         }, 3000);
