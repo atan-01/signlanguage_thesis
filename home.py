@@ -53,7 +53,7 @@ def home():
         room = code
         if create != False:
             room = generate_unique_code(6)
-            rooms[room] = {"members": 0, "messages": [], "participants": []}
+            rooms[room] = {"members": 0, "messages": [], "participants": [], "creator": name}
             session['created'] = True
         elif code not in rooms:
             return render_template('home.html', user=user_data, error = "Room does not exist.", code=code)

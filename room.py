@@ -32,5 +32,7 @@ def room(room_code):
 
     created = session.get('created', False)
     participants = rooms[room_code].get("participants", [])
+    room_data = rooms[room_code]
+    creator_username = room_data.get("creator", "Unknown")  
 
-    return render_template('room.html', user=user_data, messages=rooms[room_code]["messages"], room_code=room_code, created=created, participants=participants)
+    return render_template('room.html', user=user_data, messages=rooms[room_code]["messages"], room_code=room_code, created=created, participants=participants, creator_username=creator_username)

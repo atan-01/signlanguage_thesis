@@ -73,25 +73,62 @@
     {% if created %}
         <div class="creator-participate-overlay" id="creator-participate" style="display: none;">
             <div class="participate">
-                <h2>Participate?</h2>
-                <p>If you can read this... nice.</p>
-                <button onclick="participate_btn()">Yes</button>
-                <button onclick="notparticipate_btn()">No</button>
+                <div class="participate-contents">
+                    <div class="gm_header">GAME OPTIONS</div>
+                    <div class="gamemode_container">
+                        <button class="btn_prev" id="btn_prev"> < </button>
+                        <div class="gamemode"></div>
+                        <button class="btn_next" id="btn_next"> > </button>
+                    </div>
+                    <div class="mode_name_key">
+                        <div class="modename"></div>
+                        <span class="room_key"> 🔑 {{ room_code }} </span>
+                    </div>
+                    <span class="room_creator"> Room Created by: {{ creator_username }}</span>
+                    <div class="gametime">
+                        <label for="game-time">Select Game Time:</label>
+                        <select id="game-time" name="game-time">
+                        <option value="30">30 seconds</option>
+                        <option value="60">1 minute</option>
+                        <option value="120">2 minutes</option>
+                        <option value="180">3 minutes</option>
+                        <option value="300">5 minutes</option>
+                        <option value="420">7 minutes</option>
+                        <option value="600">10 minutes</option>
+                        </select>
+                    </div>
+                    <hr>
+                    <p class="douwant"> Do you want to participate in the game? </p>
+                    <div class="radio_container">
+                        <div class="radio_participate">
+                            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault1">
+                            <label class="form-check-label" for="flexRadioDefault1">
+                                Absolutely
+                            </label>
+                        </div>
+                        <div class="radio_participate">
+                            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault2" checked>
+                            <label class="form-check-label" for="flexRadioDefault2">
+                                Nope
+                            </label>
+                        </div>
+                    </div>
+                <!--
+                    <button onclick="participate_btn()">Yes</button>
+                    <button onclick="notparticipate_btn()">No</button> -->
+
+
+                </div>
+                <div class="btn_container">
+                    <button class="btn_close"> Close </button>
+                    <button class="btn_confirm"> Confirm </button>
+                </div>
             </div>
         </div>
 
         <div class="game-controls">
             <button type="button" id="startgameBtn" disabled>Waiting for cameras...</button>
             <p><em>As the room creator, you can start the game once all participants have their cameras ready.</em></p>
-        </div>
-        <div id="game-type-select">
-            <h3>Select Game Type:</h3>
-            <select id="gameType">
-                <option value="timed">Timed (10 seconds)</option>
-                <option value="game2......">game 2...</option>
-                <option value="game3......">game 3...</option>
-            </select>
-            <button onclick="submitGameType()">Confirm</button>
         </div>
     {% else %}
         <div class="game-controls">
@@ -104,13 +141,14 @@
         <h4>Camera Status:</h4>
         <div id="camera-list"></div>
     </div>
+    <div class="timer_display"></div>
 
     <button class="exit-room" onclick="exitroom()"> Exit room </button>
 
     <span>  ↵ testing </span>
     <div class="leaderboard-overlay" id="leaderboard" style="display: none;">
         <div class="leaderboard">
-            <h2>🏆 Leaderboard</h2>
+            <h4>🏆 Leaderboard</h4>
 
             <div class="leaderboard-table">
                 <div class="leaderboard-header">
@@ -127,6 +165,10 @@
     </div>
 
     <script>
+        // for late users
+        const ROOM_CODE = "{{ room_code }}";
+        const USERNAME = "{{ user['username'] }}";
+
         // Set room creator status BEFORE loading room.js
         window.isRoomCreator = document.body.dataset.isRoomCreator === "true"; //turns string to bool
         const createmessage = (name, msg, type = 'normal') => {

@@ -3,14 +3,26 @@ let allCamerasReady = false;
 let gameTypeSelected = false;
 let participate = true;
 let socketio; // Will use shared socket from detector
+let gamemodeindex = 0;
+let gametime = 1000;
+let selectedGameTime = 30;
 
-window.addEventListener('DOMContentLoaded', () => {
+const gamemodeimages = [
+    '/static/images/gm_timestarts.png',
+    '/static/images/gm_fillintheblanks.png',
+    '/static/images/gm_ghostsign.png'
+];
+
+const gamemodenames = ['Timer Starts', 'Fill in the Blanks', 'Ghost Sign'];
+
+window.addEventListener('DOMContentLoaded', () => {    
     if (window.isRoomCreator) {
         const overlay = document.getElementById('creator-participate');
         if (overlay) {
+            updategamemodeimage();
             overlay.style.display = 'flex';
         }
-    }
+    };
 
     // Initialize the sign language detector for room mode with shared socket
     detector = new SignLanguageDetector({
@@ -36,7 +48,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Use the shared socket from the detector
     socketio = detector.socketio;
-    
+    socketio.emit('join_room', { room: ROOM_CODE, name: USERNAME });
+
     // Setup room-specific socket event handlers on the shared socket
     setupRoomSocketHandlers();
 });
@@ -44,6 +57,13 @@ window.addEventListener('DOMContentLoaded', () => {
 // Get DOM elements for room-specific functionality
 const messages = document.getElementById("messages");
 const startGameButton = document.getElementById('startgameBtn');
+const gamemodediv = document.querySelector('.gamemode');
+const btn_prev = document.getElementById('btn_prev');
+const btn_next = document.getElementById('btn_next');
+const modenamediv = document.querySelector('.modename');
+const btn_close = document.querySelector('.btn_close');
+const btn_confirm = document.querySelector('.btn_confirm');
+const timer_div = document.querySelector('.timer_display');
 
 // Debug: Check if elements exist
 console.log('DOM elements check:');
@@ -83,6 +103,7 @@ function setupRoomSocketHandlers() {
         gameTypeSelected = true;
         console.log("Game type is:", data.type);
         document.getElementById('game-type-display').innerText = `Mode: ${data.type}`;
+        timer_div.textContent = data.duration;
         tryEnableStartGameButton();
     });
 
@@ -95,7 +116,7 @@ function setupRoomSocketHandlers() {
         detector.resetScore();
         detector.startProcessing();
 
-        let timeLeft = 10;
+        let timeLeft = selectedGameTime;
         const timerDisplay = document.getElementById('timer');
         timerDisplay.textContent = `Time: ${timeLeft}s`;
 
@@ -121,7 +142,7 @@ function setupRoomSocketHandlers() {
                     startGameButton.disabled = false;
                 }
             }
-        }, 1000); // timer, 1000ms = 1 sec intervals for 10 second game
+        }, gametime); // timer, 1000ms = 1 sec intervals for 10 second game
     }); 
 
     socketio.on('leaderboard_update', function(data) {
@@ -198,9 +219,65 @@ function setupRoomSocketHandlers() {
 }
 
 // Room-specific functions
-function participate_btn() {
-    document.getElementById('creator-participate').style.display = 'none';
+function updategamemodeimage() {
+    gamemodediv.style.backgroundImage = `url(${gamemodeimages[gamemodeindex]})`;
+    modenamediv.textContent = gamemodenames[gamemodeindex];
 }
+
+btn_prev.addEventListener('click', () => {
+    gamemodeindex = (gamemodeindex - 1 + gamemodeimages.length) % gamemodeimages.length; //cycle around
+    updategamemodeimage();
+});
+
+btn_next.addEventListener('click', () => {
+    gamemodeindex = (gamemodeindex + 1) % gamemodeimages.length;
+    updategamemodeimage();
+})
+
+function handleConfirmButton() {
+    const participateRadio = document.getElementById('flexRadioDefault1'); // "Absolutely"
+    const notParticipateRadio = document.getElementById('flexRadioDefault2'); // "Nope"
+    //radio button
+    if (participateRadio.checked) {
+        participate = true;
+        console.log('User chose to participate');
+    } else if (notParticipateRadio.checked) {
+        participate = false;
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        if (startBtn) startBtn.disabled = true;
+        if (stopBtn) stopBtn.disabled = true;
+        
+        socketio.emit('camera_ready');
+        console.log('User chose not to participate - Camera ready event sent to server');
+    }
+    // time    
+    const gameTimeSelect = document.getElementById('game-time');
+    selectedGameTime = parseInt(gameTimeSelect.value); // Get selected seconds
+    gametime = 1000;
+    console.log(`Game time set to: ${selectedGameTime} seconds (${selectedGameTime * 1000}ms total)`);
+    console.log(`Timer interval: ${gametime}ms`);
+    // mode
+    let selectedType = modenamediv.textContent;
+    socketio.emit('set_game_type_and_time', { 
+        type: selectedType,
+        duration: selectedGameTime
+    });
+    
+    document.getElementById('creator-participate').style.display = 'none';
+    
+    console.log('Settings confirmed:', {
+        participate: participate,
+        gameTime: selectedGameTime,
+        gameType: selectedType
+    });
+}
+
+btn_close.addEventListener('click', () => {
+    document.getElementById('creator-participate').style.display = 'none';
+});
+
+btn_confirm.addEventListener('click', handleConfirmButton);
 
 function notparticipate_btn() {
     participate = false;
@@ -257,11 +334,7 @@ document.getElementById("message").addEventListener("keypress", function(event) 
     }
 });
 
-function submitGameType() {
-    const selectedType = document.getElementById('gameType').value;
-    socketio.emit('set_game_type', { type: selectedType });
-    document.getElementById('game-type-select').style.display = 'none';
-}
+
 
 function tryEnableStartGameButton() {
     if (window.isRoomCreator && allCamerasReady && gameTypeSelected && startGameButton) {

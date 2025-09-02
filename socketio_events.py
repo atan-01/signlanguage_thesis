@@ -1,4 +1,4 @@
-from flask import session, current_app
+from flask import session, current_app, request
 from flask_socketio import emit, join_room, leave_room, send
 import cv2
 import numpy as np
@@ -112,6 +112,23 @@ def init_all_socketio_events(socketio, supabase, detector=None):
 
     # ===== ROOM-SPECIFIC EVENTS =====
     # Room-specific events
+    @socketio.on('join_room')
+    def handle_join(data):
+        room = data.get("room")
+        name = data.get("name")
+
+        if room not in rooms:
+            return
+
+        join_room(room)
+
+        # Send the current game mode & time if already set
+        game_type = rooms[room].get('game_type')
+        duration = rooms[room].get('duration', 30)
+
+        if game_type:
+            emit('game_type_set', {'type': game_type, 'duration': duration}, to=request.sid)
+
     @socketio.on('message')
     def handle_message(data):
         room = session.get("room")
@@ -162,13 +179,15 @@ def init_all_socketio_events(socketio, supabase, detector=None):
             
         check_camera_readiness(room, rooms)
 
-    @socketio.on('set_game_type')
+    @socketio.on('set_game_type_and_time')
     def handle_game_type(data):
         room = session.get("room")
         game_type = data.get('type')
+        duration = data.get('duration', 30)
         if room and room in rooms:
             rooms[room]['game_type'] = game_type
-            emit('game_type_set', {'type': game_type}, room=room)
+            rooms[room]['duration'] = data.get('duration', 30)
+            emit('game_type_set', {'type': game_type, 'duration': duration}, room=room)
 
     @socketio.on('start_game')
     def handle_start_game():
