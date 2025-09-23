@@ -114,8 +114,8 @@ class SignLanguageDetector {
             await this.hands.setOptions({
                 maxNumHands: 2,
                 modelComplexity: 0, // Changed from 1 to 0 (lighter model)
-                minDetectionConfidence: 0.5, // Lowered from 0.7
-                minTrackingConfidence: 0.5
+                minDetectionConfidence: 0.6, // Lowered from 0.7
+                minTrackingConfidence: 0.6
             });
 
             this.hands.onResults((results) => {
