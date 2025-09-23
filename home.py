@@ -1,11 +1,11 @@
 from flask import Blueprint, render_template, session, redirect, url_for, current_app, request
-from flask_socketio import emit, join_room, leave_room, send
 import random
 from string import ascii_uppercase
 
 home_bp = Blueprint('home', __name__, url_prefix='/home')
 
 rooms = {}
+game_states = {}
 
 def get_user_by_id(user_id):
     """Get user by ID from Supabase"""
@@ -30,8 +30,7 @@ def generate_unique_code(length):
 
 @home_bp.route('/', methods=["POST", "GET"])
 def home():
-    """Main translator page - requires login""" # add this in EVERY python file aside app and auth
-    print
+    """Main translator page - requires login"""
     print("user is in home")
     user_id = session.get('user_id')
     if not user_id:
@@ -48,19 +47,28 @@ def home():
         create = request.form.get("create", False)
 
         if join != False and not code:
-            return render_template('home.html', user=user_data, error = "Please enter a room code.", code=code)
+            return render_template('home.html', user=user_data, error="Please enter a room code.", code=code)
 
         room = code
         if create != False:
             room = generate_unique_code(6)
-            rooms[room] = {"members": 0, "messages": [], "participants": [], "creator": name}
+            # Only create room in memory - database insertion happens when game starts
+            rooms[room] = {
+                "members": 0, 
+                "messages": [], 
+                "participants": [], 
+                "creator": name, 
+                "creator_id": user_data['id']
+            }
             session['created'] = True
+            print(f"Room {room} created in memory only")
+
         elif code not in rooms:
-            return render_template('home.html', user=user_data, error = "Room does not exist.", code=code)
+            return render_template('home.html', user=user_data, error="Room does not exist.", code=code)
         else:
             session['created'] = False
 
-        session["room"] = room  # edit this so that its database related
+        session["room"] = room 
         session["name"] = name
 
         return redirect(url_for('room.room', room_code=room))

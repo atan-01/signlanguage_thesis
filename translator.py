@@ -180,7 +180,36 @@ class WebSignLanguageDetector:
             'landmarks': landmarks_data,
             'model_loaded': self.model_loaded
         }
-
+    
+    def process_landmarks(self, processed_features):
+        if not self.model_loaded:
+            return {'prediction': 'Model not available', 'confidence': 0}
+        
+        try:
+            scaled_features = self.scaler.transform(processed_features)
+            prediction_prob = self.model.predict_proba(scaled_features)[0]
+            predicted_class_idx = self.model.predict(scaled_features)[0]
+            
+            raw_predicted_class = self.label_encoder.inverse_transform([predicted_class_idx])[0]
+            predicted_class = self.custom_class_names.get(raw_predicted_class, raw_predicted_class)
+            confidence = float(np.max(prediction_prob))
+            
+            # Add smoothing back
+            self.prediction_window.append(predicted_class)
+            self.confidence_window.append(confidence)
+            
+            # Return smoothed result
+            if len(self.prediction_window) > 0:
+                most_common = max(set(self.prediction_window), key=self.prediction_window.count)
+                avg_confidence = float(np.mean(self.confidence_window))
+                return {'prediction': most_common, 'confidence': avg_confidence}
+            
+            return {'prediction': predicted_class, 'confidence': confidence}
+            
+        except Exception as e:
+            print(f"Error in landmark prediction: {e}")
+            return {'prediction': 'Error', 'confidence': 0}
+        
 # Initialize detector
 detector = WebSignLanguageDetector()
 

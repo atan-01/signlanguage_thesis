@@ -1,15 +1,15 @@
+// SignLanguageDetector - MediaPipe client + landmarks-only server processing
 class SignLanguageDetector {
     constructor(config = {}) {
-        // Configuration
         this.config = {
             processingInterval: config.processingInterval || 300,
             frameQuality: config.frameQuality || 0.8,
-            socketNamespace: config.socketNamespace || '',
             isRoomMode: config.isRoomMode || false,
             enableGameLogic: config.enableGameLogic || false,
             enableLearningMode: config.enableLearningMode || false,
             enableFpsCounter: config.enableFpsCounter || false,
-            useExistingSocket: config.useExistingSocket || false,
+            requireSocket: config.requireSocket !== false,
+            participate: config.participate !== false,
             ...config
         };
 
@@ -21,10 +21,17 @@ class SignLanguageDetector {
         this.isProcessing = false;
         this.processingInterval = null;
         this.isCameraReady = false;
-        this.fpsCounter = 0;
-        this.lastFrameTime = 0;
 
-        // Game-specific variables (only used in room mode)
+        // Canvas setup
+        this.captureCanvas = document.createElement('canvas');
+        this.captureCtx = this.captureCanvas.getContext('2d');
+        this.ctx = this.elements.canvas ? this.elements.canvas.getContext('2d') : null;
+
+        // MediaPipe setup
+        this.hands = null;
+        this.isMediaPipeReady = false;
+        
+        // Game-specific variables
         if (this.config.enableGameLogic) {
             this.holdCounter = 0;
             this.score = 0;
@@ -38,32 +45,34 @@ class SignLanguageDetector {
             this.targetletter = this.asl_classes[Math.floor(Math.random() * this.asl_classes.length)];
             this.updateGameUI();
         }
-
+        
         // Learning mode variables
         if (this.config.enableLearningMode) {
-            this.learningTarget = null; // Will be set externally
-            this.learningHoldCounter = 0;   // track how long the user continuously holds the correct sign.
-            this.learningSuccessThreshold = 10; // 4 * 300ms = 1200ms hold time (the hold time)
-            this.learningConfidenceThreshold = 50; // 50% confidence minimum
-            this.hasShownSuccess = false; // Prevent multiple alerts for same target
+            this.learningTarget = null;
+            this.learningHoldCounter = 0;
+            this.learningSuccessThreshold = 10;
+            this.learningConfidenceThreshold = 50;
+            this.hasShownSuccess = false;
         }
 
-        // Socket connection - use existing socket if provided, otherwise create new one
-        if (this.config.useExistingSocket && window.sharedSocket) {
-            this.socketio = window.sharedSocket;
-            this.ownsSocket = false;
-        } else {
-            this.socketio = io();
-            this.ownsSocket = true;
-            
-            // Make socket available globally if this is room mode
+        // Socket setup - required for sending landmarks
+        if (this.config.requireSocket) {
             if (this.config.isRoomMode) {
-                window.sharedSocket = this.socketio;
+                this.socketio = io();
+                this.setupRoomSync();
+                this.ownsSocket = true;
+            } else {
+                this.socketio = io();
+                this.setupStandaloneSync();
+                this.ownsSocket = true;
             }
         }
+
+        // Initialize MediaPipe and setup
+        this.initMediaPipe();
+        this.setupEventListeners();
         
-        // Initialize
-        this.init();
+        console.log('SignLanguageDetector initialized - MediaPipe landmarks + server RandomForest');
     }
 
     getDOMElements() {
@@ -80,60 +89,65 @@ class SignLanguageDetector {
             startProcessingBtn: document.getElementById('startProcessingBtn'),
             stopProcessingBtn: document.getElementById('stopProcessingBtn'),
             fpsCounter: document.getElementById('fpsCounter'),
-            // Game-specific elements
             scoreElement: document.getElementById('score'),
             targetElement: document.getElementById('target-letter'),
-            timerDisplay: document.getElementById('timer')
+            timerDisplay: document.getElementById('timer_display')
         };
     }
 
-    init() {
-        // Get canvas context
-        this.ctx = this.elements.canvas ? this.elements.canvas.getContext('2d') : null;
-
-        // Setup socket event handlers only if we own the socket or it's not room mode
-        if (this.ownsSocket || !this.config.isRoomMode) {
-            this.setupSocketHandlers();
-        } else {
-            // Just setup prediction handlers for shared socket
-            this.setupPredictionHandler();
-        }
-
-        // Setup DOM event listeners
-        this.setupEventListeners();
-
-        // Join appropriate session only if we own the socket
-        if (this.ownsSocket) {
-            if (this.config.isRoomMode) {
-                console.log('Sign Language Detector initialized for room mode with new socket');
-            } else {
-                this.socketio.emit('join_translator');
-                console.log('Sign Language Detector initialized for translator mode');
+    async initMediaPipe() {
+        try {
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait longer
+            
+            if (typeof Hands === 'undefined') {
+                console.error('MediaPipe Hands not loaded - check script tag');
+                this.isMediaPipeReady = false;
+                return;
             }
-        } else {
-            console.log('Sign Language Detector initialized with shared socket');
+
+            this.hands = new Hands({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                }
+            });
+
+            await this.hands.setOptions({
+                maxNumHands: 2,
+                modelComplexity: 0, // Changed from 1 to 0 (lighter model)
+                minDetectionConfidence: 0.5, // Lowered from 0.7
+                minTrackingConfidence: 0.5
+            });
+
+            this.hands.onResults((results) => {
+                this.processMediaPipeResults(results);
+            });
+
+            await this.hands.initialize(); // Add explicit initialization
+
+            this.isMediaPipeReady = true;
+            console.log('MediaPipe initialized successfully');
+            
+        } catch (error) {
+            console.error('MediaPipe failed:', error);
+            this.isMediaPipeReady = false;
         }
     }
 
-    setupSocketHandlers() {
+    setupRoomSync() {
         this.socketio.on('connect', () => {
-            console.log('Connected to server');
-            if (!this.config.isRoomMode) {
-                this.socketio.emit('join_translator');
-            }
+            console.log('Connected to room sync');
+        });
+
+        this.socketio.on('prediction_result', (data) => {
+            this.handlePredictionResult(data);
         });
 
         this.socketio.on('status', (data) => {
             if (this.elements.statusDiv) {
-                this.elements.statusDiv.textContent = data.message + (data.model_loaded ? ' (Model Ready)' : ' (Demo Mode)');
+                this.elements.statusDiv.textContent = data.message;
                 this.elements.statusDiv.className = 'status connected';
-                if (!data.model_loaded) {
-                    this.elements.statusDiv.textContent += ' - Model not available';
-                }
             }
         });
-
-        this.setupPredictionHandler();
 
         this.socketio.on('error', (data) => {
             console.error('Server error:', data.message);
@@ -142,32 +156,54 @@ class SignLanguageDetector {
                 this.elements.statusDiv.className = 'status disconnected';
             }
         });
+    }
 
-        this.socketio.on('disconnect', () => {
+    setupStandaloneSync() {
+        this.socketio.on('connect', () => {
+            console.log('Connected to translator');
+            this.socketio.emit('join_translator');
+        });
+
+        this.socketio.on('prediction_result', (data) => {
+            this.handlePredictionResult(data);
+        });
+
+        this.socketio.on('status', (data) => {
             if (this.elements.statusDiv) {
-                this.elements.statusDiv.textContent = 'Disconnected from server';
-                this.elements.statusDiv.className = 'status disconnected';
+                this.elements.statusDiv.textContent = data.message;
+                this.elements.statusDiv.className = 'status connected';
             }
         });
     }
 
-    setupPredictionHandler() {
-        this.socketio.on('prediction_result', (data) => {
-            this.handlePredictionResult(data);
-        });
-    }
-
     setupEventListeners() {
-        // Camera controls
-        if (this.elements.startBtn) {
-            this.elements.startBtn.addEventListener('click', () => this.startCamera());
+        const cameraButton = this.elements.startBtn || document.getElementById('startBtn');
+        if (cameraButton) {
+            cameraButton.addEventListener('click', (e) => {
+                const button = e.target;
+                if (button.id === 'startBtn') {
+                    this.startCamera();
+                    
+                    button.id = "stopBtn";
+                    button.className = "btn danger";
+                    button.textContent = "Stop Camera";
+                    button.disabled = false;
+                    
+                    this.elements.stopBtn = button;
+                    
+                } else if (button.id === 'stopBtn') {
+                    this.stopCamera();
+                    
+                    button.id = "startBtn";
+                    button.className = "btn";
+                    button.textContent = "Start Camera";
+                    button.disabled = false;
+                    
+                    this.elements.startBtn = button;
+                }
+            });
         }
 
-        if (this.elements.stopBtn) {
-            this.elements.stopBtn.addEventListener('click', () => this.stopCamera());
-        }
-
-        // Processing controls
         if (this.elements.toggleProcessingBtn) {
             this.elements.toggleProcessingBtn.addEventListener('click', () => {
                 if (this.isProcessing) {
@@ -186,17 +222,16 @@ class SignLanguageDetector {
             this.elements.stopProcessingBtn.addEventListener('click', () => this.stopProcessing());
         }
 
-        // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
-            if (!this.config.isRoomMode && this.ownsSocket) {
+            if (!this.config.isRoomMode && this.ownsSocket && this.socketio) {
                 this.socketio.emit('leave_translator');
             }
             this.stopCamera();
         });
     }
 
-    async startCamera() {   // async = lets you can use 'await'
-        console.log('Starting camera...'); 
+    async startCamera() {
+        console.log('Starting camera...');
         try {
             this.stream = await navigator.mediaDevices.getUserMedia({
                 video: {
@@ -214,10 +249,13 @@ class SignLanguageDetector {
                         this.elements.canvas.width = this.elements.videoElement.videoWidth;
                         this.elements.canvas.height = this.elements.videoElement.videoHeight;
                     }
+
+                    this.captureCanvas.width = this.elements.videoElement.videoWidth;
+                    this.captureCanvas.height = this.elements.videoElement.videoHeight;
+
                     this.isCameraReady = true;
                     
-                    // Notify room mode about camera readiness
-                    if (this.config.isRoomMode) {
+                    if (this.config.isRoomMode && this.socketio) {
                         this.socketio.emit('camera_ready');
                         console.log('Camera ready event sent to server');
                     }
@@ -227,7 +265,6 @@ class SignLanguageDetector {
             this.updateCameraControls(true);
             console.log('Camera started successfully');
             
-            // Call onCameraStart callback if provided
             if (this.config.onCameraStart) {
                 this.config.onCameraStart();
             }
@@ -254,8 +291,7 @@ class SignLanguageDetector {
 
         this.updateCameraControls(false);
 
-        // Notify room mode about camera stop
-        if (this.config.isRoomMode) {
+        if (this.config.isRoomMode && this.socketio) {
             this.socketio.emit('camera_stopped');
             console.log('Camera stopped event sent to server');
         }
@@ -266,7 +302,6 @@ class SignLanguageDetector {
         
         console.log('Camera stopped');
 
-        // Call onCameraStop callback if provided
         if (this.config.onCameraStop) {
             this.config.onCameraStop();
         }
@@ -275,7 +310,6 @@ class SignLanguageDetector {
     startProcessing() {
         console.log('Starting processing...');
         
-        // Check if participation is allowed (for room mode)
         if (this.config.isRoomMode && this.config.participate === false) {
             return;
         }
@@ -285,21 +319,24 @@ class SignLanguageDetector {
             return;
         }
 
+        if (!this.isMediaPipeReady) {
+            alert('MediaPipe not ready. Please refresh the page.');
+            return;
+        }
+
         this.isProcessing = true;
         
-        // Update toggle button if exists
         if (this.elements.toggleProcessingBtn) {
             this.elements.toggleProcessingBtn.textContent = 'Stop Detection';
             this.elements.toggleProcessingBtn.classList.add('processing');
         }
 
         this.processingInterval = setInterval(() => {
-            this.captureAndSendFrame();
+            this.captureAndProcessFrame();
         }, this.config.processingInterval);
 
-        console.log('Processing started');
+        console.log('Processing started - sending landmarks to server');
 
-        // Call onProcessingStart callback if provided
         if (this.config.onProcessingStart) {
             this.config.onProcessingStart();
         }
@@ -314,60 +351,99 @@ class SignLanguageDetector {
             this.processingInterval = null;
         }
 
-        // Update toggle button if exists
         if (this.elements.toggleProcessingBtn) {
             this.elements.toggleProcessingBtn.textContent = 'Start Detection';
             this.elements.toggleProcessingBtn.classList.remove('processing');
         }
 
-        // Reset display
         this.resetDisplay();
 
         console.log('Processing stopped');
 
-        // Call onProcessingStop callback if provided
         if (this.config.onProcessingStop) {
             this.config.onProcessingStop();
         }
     }
 
-    captureAndSendFrame() {
-        if (!this.elements.videoElement || !this.elements.videoElement.videoWidth || !this.elements.videoElement.videoHeight) {
+    async captureAndProcessFrame() {
+        if (!this.elements.videoElement || !this.elements.videoElement.videoWidth) {
             return;
         }
 
-        const tempCanvas = document.createElement('canvas');
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCanvas.width = this.elements.videoElement.videoWidth;
-        tempCanvas.height = this.elements.videoElement.videoHeight;
+        if (!this.isMediaPipeReady || !this.hands) {
+            console.error('MediaPipe not ready');
+            return;
+        }
 
-        // Mirror the image horizontally
-        tempCtx.scale(-1, 1);
-        tempCtx.drawImage(this.elements.videoElement, -tempCanvas.width, 0);
+        try {
+            await this.hands.send({ image: this.elements.videoElement });
+        } catch (error) {
+            console.error('MediaPipe processing failed:', error);
+        }
 
-        const imageData = tempCanvas.toDataURL('image/jpeg', this.config.frameQuality);
-        
-        // Send to appropriate endpoint based on mode
-        const eventName = this.config.isRoomMode ? 'process_frame_room' : 'process_frame_translator';
-        this.socketio.emit(eventName, { image: imageData });
-
-        // Update FPS counter if enabled
         if (this.config.enableFpsCounter) {
             this.updateFpsCounter();
         }
     }
 
+    processMediaPipeResults(results) {
+        if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+            // Send "no hands" signal to server
+            this.sendLandmarksToServer(null);
+            return;
+        }
+
+        try {
+            // Extract landmarks and handedness
+            const handsData = [];
+            
+            for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+                const landmarks = results.multiHandLandmarks[i];
+                const handedness = results.multiHandedness[i];
+                
+                handsData.push({
+                    label: handedness.label,
+                    landmarks: landmarks.map(lm => ({
+                        x: lm.x,
+                        y: lm.y, 
+                        z: lm.z
+                    })),
+                    confidence: handedness.score
+                });
+            }
+            
+            // Send lightweight landmark data to server
+            this.sendLandmarksToServer(handsData);
+            
+            // Draw landmarks for visual feedback
+            this.drawLandmarks(this.formatLandmarksForDisplay(results.multiHandLandmarks));
+            
+        } catch (error) {
+            console.error('Error processing MediaPipe results:', error);
+        }
+    }
+
+    sendLandmarksToServer(handsData) {
+        if (!this.socketio) {
+            console.error('Socket not available');
+            return;
+        }
+
+        const eventName = this.config.isRoomMode ? 'process_landmarks_room' : 'process_landmarks_translator';
+        
+        this.socketio.emit(eventName, {
+            landmarks: handsData,
+            timestamp: Date.now()
+        });
+    }
+
     handlePredictionResult(data) {
-        // For learning mode, only show results for the target class
         if (this.config.enableLearningMode && this.learningTarget) {
-            // Only update display if the prediction matches the learning target
             if (data.prediction === this.learningTarget) {
-                // Update prediction display
                 if (this.elements.predictionDiv) {
                     this.elements.predictionDiv.textContent = data.prediction;
                 }
                 
-                // Update confidence display
                 const confidencePercent = Math.round(data.confidence * 100);
                 if (this.elements.confidenceDiv) {
                     this.elements.confidenceDiv.textContent = confidencePercent + '%';
@@ -376,9 +452,8 @@ class SignLanguageDetector {
                     this.elements.confidenceBar.style.width = confidencePercent + '%';
                 }
             } else {
-                // Show that we're looking for the target class but not detecting it
                 if (this.elements.predictionDiv) {
-                    this.elements.predictionDiv.textContent = `${this.learningTarget}`;
+                    this.elements.predictionDiv.textContent = `Looking for: ${this.learningTarget}`;
                 }
                 if (this.elements.confidenceDiv) {
                     this.elements.confidenceDiv.textContent = '0%';
@@ -388,17 +463,13 @@ class SignLanguageDetector {
                 }
             }
             
-            // Handle learning logic with original prediction data
             this.handleLearningLogic(data.prediction, Math.round(data.confidence * 100));
             
         } else {
-            // Normal mode - show all predictions
-            // Update prediction display
             if (this.elements.predictionDiv) {
                 this.elements.predictionDiv.textContent = data.prediction;
             }
             
-            // Update confidence display
             const confidencePercent = Math.round(data.confidence * 100);
             if (this.elements.confidenceDiv) {
                 this.elements.confidenceDiv.textContent = confidencePercent + '%';
@@ -407,23 +478,15 @@ class SignLanguageDetector {
                 this.elements.confidenceBar.style.width = confidencePercent + '%';
             }
             
-            // Handle game logic if enabled (ROOM MODE)
             if (this.config.enableGameLogic) {
                 this.handleGameLogic(data.prediction, confidencePercent);
             }
         }
 
-        // Draw hand landmarks if available (always show these)
-        if (data.landmarks && data.landmarks.length > 0 && this.ctx) {
-            this.drawLandmarks(data.landmarks);
-        }
-
-        // Call custom prediction handler if provided
         if (this.config.onPrediction) {
             this.config.onPrediction(data);
         }
     }
-
 
     handleGameLogic(prediction, confidencePercent) {
         if (prediction === this.targetletter && confidencePercent >= 50) {
@@ -432,44 +495,38 @@ class SignLanguageDetector {
             this.holdCounter = 0;
         }
 
-        if (this.holdCounter >= 4) { // 4 * 300ms = 1200ms hold time
-            this.score += 1;
+        if (this.holdCounter >= 4) {
+            this.score += 10;
             this.holdCounter = 0;
             this.targetletter = this.asl_classes[Math.floor(Math.random() * this.asl_classes.length)];
             this.updateGameUI();
 
-            // Emit score update for room mode
-            if (this.config.isRoomMode) {
+            if (this.config.isRoomMode && this.socketio) {
                 this.socketio.emit('score_update', { score: this.score });
             }
         }
     }
 
-    // Handle learning mode logic
     handleLearningLogic(prediction, confidencePercent) {
         if (!this.learningTarget) {
-            return; // No target set yet
+            return;
         }
 
-        // Check if prediction matches target with sufficient confidence
         if (prediction === this.learningTarget && confidencePercent >= this.learningConfidenceThreshold) {
             this.learningHoldCounter += 1;
         } else {
             this.learningHoldCounter = 0;
-            this.hasShownSuccess = false; // Reset success flag when not matching
+            this.hasShownSuccess = false;
         }
 
-        // If held long enough and haven't shown success yet
         if (this.learningHoldCounter >= this.learningSuccessThreshold && !this.hasShownSuccess) {
             this.showLearningSuccess();
-            this.hasShownSuccess = true; // Prevent multiple alerts for same target
-            this.learningHoldCounter = 0; // Reset counter
+            this.hasShownSuccess = true;
+            this.learningHoldCounter = 0;
         }
     }
 
-    // NEW: Show learning success notification
     showLearningSuccess() {
-        // Create a nice success notification
         const notification = document.createElement('div');
         notification.style.cssText = `
             position: fixed;
@@ -493,7 +550,6 @@ class SignLanguageDetector {
             <small>You performed "${this.learningTarget}" correctly!</small>
         `;
         
-        // Add animation keyframes if not already added
         if (!document.getElementById('learningSuccessStyles')) {
             const style = document.createElement('style');
             style.id = 'learningSuccessStyles';
@@ -512,7 +568,6 @@ class SignLanguageDetector {
         
         document.body.appendChild(notification);
         
-        // Remove notification after 3 seconds
         setTimeout(() => {
             notification.style.animation = 'slideOut 0.3s ease-in';
             setTimeout(() => {
@@ -525,7 +580,6 @@ class SignLanguageDetector {
             }, 300);
         }, 3000);
         
-        // Also trigger custom callback if provided
         if (this.config.onLearningSuccess) {
             this.config.onLearningSuccess(this.learningTarget);
         }
@@ -533,17 +587,33 @@ class SignLanguageDetector {
         console.log(`Learning success: ${this.learningTarget} performed correctly!`);
     }
 
-    updateGameUI() {
-        if (this.elements.scoreElement) {
-            this.elements.scoreElement.textContent = `Score: ${this.score}`;
-        }
-        if (this.elements.targetElement) {
-            this.elements.targetElement.textContent = `Target: ${this.targetletter}`;
-        }
+    formatLandmarksForDisplay(multiHandLandmarks) {
+        const formattedLandmarks = [];
+        
+        multiHandLandmarks.forEach(handLandmarks => {
+            const points = handLandmarks.map(lm => [lm.x, lm.y, lm.z]);
+            const connections = [
+                [0, 1], [1, 2], [2, 3], [3, 4], // Thumb
+                [0, 5], [5, 6], [6, 7], [7, 8], // Index
+                [0, 9], [9, 10], [10, 11], [11, 12], // Middle
+                [0, 13], [13, 14], [14, 15], [15, 16], // Ring
+                [0, 17], [17, 18], [18, 19], [19, 20], // Pinky
+                [5, 9], [9, 13], [13, 17] // Palm
+            ];
+            
+            formattedLandmarks.push({
+                points: points,
+                connections: connections
+            });
+        });
+        
+        return formattedLandmarks;
     }
 
     drawLandmarks(landmarks) {
-        if (!this.ctx || !this.elements.canvas) return;
+        if (!this.ctx || !this.elements.canvas || !landmarks || landmarks.length === 0) {
+            return;
+        }
         
         this.ctx.clearRect(0, 0, this.elements.canvas.width, this.elements.canvas.height);
 
@@ -551,7 +621,6 @@ class SignLanguageDetector {
             const points = hand.points;
             const connections = hand.connections;
 
-            // Draw connections
             this.ctx.strokeStyle = '#00FF00';
             this.ctx.lineWidth = 2;
             this.ctx.beginPath();
@@ -571,7 +640,6 @@ class SignLanguageDetector {
 
             this.ctx.stroke();
 
-            // Draw points
             this.ctx.fillStyle = '#FF0000';
             points.forEach(point => {
                 const x = point[0] * this.elements.canvas.width;
@@ -584,13 +652,18 @@ class SignLanguageDetector {
         });
     }
 
+    updateGameUI() {
+        if (this.elements.scoreElement) {
+            this.elements.scoreElement.textContent = `Score ${this.score}`;
+        }
+        if (this.elements.targetElement) {
+            const isNumber = !isNaN(this.targetletter);
+            const label = isNumber ? "Number " : "Letter ";
+            this.elements.targetElement.textContent = `${label}${this.targetletter}`;
+        }
+    }
+
     updateCameraControls(cameraActive) {
-        if (this.elements.startBtn) {
-            this.elements.startBtn.disabled = cameraActive;
-        }
-        if (this.elements.stopBtn) {
-            this.elements.stopBtn.disabled = !cameraActive;
-        }
         if (this.elements.toggleProcessingBtn) {
             this.elements.toggleProcessingBtn.disabled = !cameraActive;
         }
@@ -622,7 +695,6 @@ class SignLanguageDetector {
         }
     }
 
-    // Public methods for external control
     resetScore() {
         if (this.config.enableGameLogic) {
             this.score = 0;
@@ -643,7 +715,6 @@ class SignLanguageDetector {
         return this.targetletter;
     }
 
-    // Learning mode methods
     setLearningTarget(target) {
         if (this.config.enableLearningMode) {
             this.learningTarget = target;
@@ -657,7 +728,7 @@ class SignLanguageDetector {
         return this.learningTarget;
     }
 
-    setLearningThresholds(holdTime = 4, confidence = 50) {
+    setLearningThresholds(holdTime = 10, confidence = 50) {
         if (this.config.enableLearningMode) {
             this.learningSuccessThreshold = holdTime;
             this.learningConfidenceThreshold = confidence;
@@ -671,7 +742,6 @@ class SignLanguageDetector {
         }
     }
 
-    // Cleanup method
     destroy() {
         this.stopCamera();
         if (this.socketio && this.ownsSocket) {

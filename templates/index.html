@@ -45,10 +45,6 @@
                     <input type="text" id="registerUsername" name="username" required>
                 </div>
                 <div class="form-group">
-                    <label for="registerEmail">Email</label>
-                    <input type="email" id="registerEmail" name="email" required>
-                </div>
-                <div class="form-group">
                     <label for="registerPassword">Password</label>
                     <input type="password" id="registerPassword" name="password" required>
                 </div>
@@ -62,6 +58,10 @@
                         <option value="Student">Student</option>
                         <option value="Teacher">Teacher</option>
                     </select>
+                </div>
+                <div class="form-group" id="gradeGroup">
+                    <label for="registerGrade">Grade</label>
+                    <input type="number" id="registerGrade" name="grade" min="1" step="1" required>
                 </div>
                 <button type="submit" class="btn">Register</button>
             </form>

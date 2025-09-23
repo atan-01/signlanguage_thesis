@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gantari:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+    <script src="{{ url_for('static', filename='js/profile.js') }}" defer></script>
+</head>
+<body>
+    <header>
+        <div class="logo">FluentHands</div>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/main/">Practice</a>
+            <a href="/learn/">Learn</a>
+            <div class="profile_container" id="profileBtn">
+                <img src="{{ url_for('static', filename=user.profile_picture) }}" alt="pfp" class="pfp">
+                {{ user.username }}
+                <div class="dropdown" id="profileMenu">
+                    <button onclick="profile('{{ user.username }}')">Profile</button>
+                    <button id="logoutBtn" data-href="{{ url_for('auth.logout') }}"> Logout </button>
+                </div>
+            </div>
+                
+        </nav>
+    </header>
+
+
+</body>
+</html>

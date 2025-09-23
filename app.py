@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_socketio import SocketIO
 from dotenv import load_dotenv
 import os
@@ -8,8 +8,9 @@ from translator import translator_bp, detector  # Remove the socketio imports
 from home import home_bp
 from room import room_bp  # Remove init_socketio import
 from learn import learn_bp
+from user_profile import profile_bp
 from socketio_events import init_all_socketio_events  # Import centralized events
-    
+
 # Load environment variables, access .env file
 load_dotenv()
 
@@ -38,10 +39,12 @@ def create_app():
     app.register_blueprint(home_bp)
     app.register_blueprint(room_bp)
     app.register_blueprint(learn_bp)
+    app.register_blueprint(profile_bp)
+
     
     # Initialize ALL SocketIO events in one place
     init_all_socketio_events(socketio, supabase, detector)
-    
+
     return app, socketio
 
 if __name__ == '__main__':

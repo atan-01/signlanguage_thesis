@@ -4,37 +4,102 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Room</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gantari:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/room.css') }}">
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 </head>
 <body data-is-room-creator="{{ created|tojson }}">
-    <div class="room-container">
-        <div class="message-box">
-            <h2>Room: {{ room_code }}</h2>
-            <div class="messages" id="messages"></div>
-            <div class="inputs">
-                <input type="text" rows="3" placeholder="message" name="message" id="message"/>
-                <button type="button" name="send" id="send_btn" onclick="sendMessage()">
-                    Send
-                </button>
+    <div id="game-countdown"></div>        <!-- overlay for countdown -->
+    <div class="whole-body">
+        <!-- left side of the page -->
+        <div class="left-side-container">
+            <div class="lpag"> Let's play a game! </div>
+
+            <!-- yellow box on top left -->
+            <div class="mode_container">
+                {% if created %}
+                    <div class="display_gamemode" onclick="openGameModeOverlay()">Click to select a Game Mode.</div>
+                {% else %}
+                    <div class="display_gamemode">Room Creator is currently selecting a Game Mode...</div>
+                {% endif %}
+
+                <div class="host_left">
+                    <span>Created by </span><div class="creator_in_left"> {{ creator_username }} </div>
+                    <div id="camera-status">
+                        <h4>Camera Status:</h4>
+                    </div>
+                </div>
+                <div class="mode_and_startbtn">
+                    <div id="game-type-display" class="game_mode_div">Game Mode: Not selected</div>
+                    {% if created %}
+                        <button type="button" id="startgameBtn" disabled>Waiting for cameras...</button>
+                    {% else %}
+                        <div class="waiting_to_start">
+                            <img src="{{ url_for('static', filename='images/hourglass.png') }}" alt="hourglass" class="hourglass">
+                            <span class="waiting_text">Waiting to start</span>
+                        </div>  
+                    {% endif %}
+                </div>
+
+            </div>
+            <span class="room-messages-header"> 
+                <div class="rmh1"> ROOM </div>
+                <div class="rmh2"> MESSAGES </div>
+            </span>
+
+            <!-- message box -->
+            <div class="message-box">
+                <div class="messages" id="messages"></div>
+                <div class="inputs">
+                    <input type="text" rows="3" placeholder="message" name="message" id="message"/>
+                    <button type="button" name="send" id="send_btn" onclick="sendMessage()">
+                        Send
+                    </button>
+                </div>
             </div>
         </div>
         
-        <div class="detector-panel">
-            <h3>🤟 Sign Language Detection</h3>
-            <div id="status" class="status disconnected">Connecting...</div>
-            
+        <!-- right side of the page -->
+        <div class="right-side-container">
+            <div class="top-right-container">
+                <div class="room_key_violet">
+                    <img src="{{ url_for('static', filename='images/violet_key.png') }}" alt="key" class="key_logo_violet">
+                    <span class="room_code"> {{ room_code }} </span>
+                </div>
+                <img src="{{ url_for('static', filename='images/participants.png') }}" alt="participants" class="btn_participants" onclick="openparticipants()">
+                <img src="{{ url_for('static', filename='images/leave.png') }}" alt="leave" class="btn_leave" onclick="exitroom()">
+            </div>
+
+            <div class="fading-bg1">
+                <span class="ts"> Target Sign</span>
+                <span id="target-letter" class="target-letter"></span>
+            </div>
+            <div class="fading-bg2">
+                <div class="ts"> {{ user['username'] }} </div>
+                <div id="score" class="score"></div>
+            </div>
+            <!-- detector panel -->
             <div class="video-container">
                 <video id="videoElement" autoplay muted></video>
                 <canvas id="canvas"></canvas>
             </div>
-            
-            <!-- Camera controls - available for ALL users -->
-            <div class="detector-controls">
-                <button id="startBtn" class="btn">Start Camera</button>
-                <button id="stopBtn" class="btn danger" disabled>Stop Camera</button>
+            <div class="host_and_buttons">
+                <div class="timer_container">
+                    Timer:
+                    <div class="timer_display" id="timer_display"><!--display ng piniling timer--></div>
+                </div>
+                <div class="button_container">
+                    <button id="startBtn" class="btn">Start Camera</button>
+                    <!-- button id="stopBtn" class="btn danger" disabled>Stop Camera</button -->
+                </div>
             </div>
-            
+
             <div class="detection-results">
                 <div class="result-item">
                     <strong>Detected:</strong> <span id="prediction">No gesture</span>
@@ -47,28 +112,7 @@
                 </div>
             </div>
         </div>
-        
-        <div class="room-participants">
-            <h3>Participants:</h3>
-            <ul id="participantList">
-                {% for participant in participants %}
-                <li>{{ participant }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-    </div>
-    
-    <div id="timer"></div>
-    <div id="target-letter"></div>
-    <div id="score"></div>
-    <div id="created">
-        {% if created %}
-            Created by: You (Room Creator)
-        {% else %}
-            Room Member
-        {% endif %}
-    </div>
-    
+
     <!-- Game controls - only show for room creator -->
     {% if created %}
         <div class="creator-participate-overlay" id="creator-participate" style="display: none;">
@@ -82,7 +126,7 @@
                     </div>
                     <div class="mode_name_key">
                         <div class="modename"></div>
-                        <span class="room_key"> 🔑 {{ room_code }} </span>
+                        <span class="room_key"> 🔑   {{ room_code }} </span>
                     </div>
                     <span class="room_creator"> Room Created by: {{ creator_username }}</span>
                     <div class="gametime">
@@ -102,22 +146,13 @@
                     <div class="radio_container">
                         <div class="radio_participate">
                             <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault1">
-                            <label class="form-check-label" for="flexRadioDefault1">
-                                Absolutely
-                            </label>
+                            <label class="form-check-label" for="flexRadioDefault1"> Absolutely</label>
                         </div>
                         <div class="radio_participate">
                             <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault2" checked>
-                            <label class="form-check-label" for="flexRadioDefault2">
-                                Nope
-                            </label>
+                            <label class="form-check-label" for="flexRadioDefault2"> Nope </label>
                         </div>
                     </div>
-                <!--
-                    <button onclick="participate_btn()">Yes</button>
-                    <button onclick="notparticipate_btn()">No</button> -->
-
-
                 </div>
                 <div class="btn_container">
                     <button class="btn_close"> Close </button>
@@ -125,27 +160,36 @@
                 </div>
             </div>
         </div>
-
-        <div class="game-controls">
-            <button type="button" id="startgameBtn" disabled>Waiting for cameras...</button>
-            <p><em>As the room creator, you can start the game once all participants have their cameras ready.</em></p>
-        </div>
-    {% else %}
-        <div class="game-controls">
-            <p><em>Waiting for room creator to start the game...</em></p>
-        </div>
     {% endif %}
-    <div id="game-type-display">Mode: Not selected</div>
-    <!-- Camera status display for all users -->
-    <div id="camera-status">
-        <h4>Camera Status:</h4>
-        <div id="camera-list"></div>
     </div>
-    <div class="timer_display"></div>
 
-    <button class="exit-room" onclick="exitroom()"> Exit room </button>
+    <!-- list of room participants-->
+    <div class="participants-container">       
+        <div class="participants_header">
+            <h3>PARTICIPANTS</h3>
+            <img src="{{ url_for('static', filename='images/x.png') }}" alt="close" class="closeparticipants" onclick="closeparticipants()">
+        </div>
+        <div class="crown-container">
+            <div class="participant-creator-wrapper">
+                <img src="{{ url_for('static', filename=creator_data.profile_picture) }}" alt="creator pfp" class="creator-pfp">
+                <div class="participant-creator">{{ creator_username }}</div>
+            </div>
+            <img src="{{ url_for('static', filename='images/crown.png') }}" alt="creator" class="crown">
+        </div>
+        <hr class="divider">
+        <div class="room-participants">
+            <ul id="participantList">
+                {% for participant in participants %}
+                <li class="participant-item">
+                    <img src="{{ url_for('static', filename=participant.profile_picture) }}" alt="pfp" class="participant-pfp">
+                    <span class="participant-name">{{ participant.username }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
 
-    <span>  ↵ testing </span>
+    <!-- Leaderboard -->
     <div class="leaderboard-overlay" id="leaderboard" style="display: none;">
         <div class="leaderboard">
             <h4>🏆 Leaderboard</h4>
@@ -160,10 +204,64 @@
                 </div>
             </div>
 
-            <button onclick="closeLeaderboard()">Close</button>
+            <button onclick="closeLeaderboard()" class="btn_closeleaderboard">Close</button>
         </div>
     </div>
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                <div id="status" class="status disconnected">Connecting...</div>
+
+    
+
+
+
+
+    <script>
+    // MediaPipe fallback check
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            if (typeof Hands === 'undefined') {
+                console.warn('MediaPipe failed to load - using fallback mode');
+                window.MediaPipeLoaded = false;
+            } else {
+                console.log('MediaPipe loaded successfully');
+                window.MediaPipeLoaded = true;
+            }
+        }, 2000); // Wait 2 seconds for MediaPipe to load
+    });
+    </script>
     <script>
         // for late users
         const ROOM_CODE = "{{ room_code }}";
@@ -185,30 +283,6 @@
             messages.innerHTML += content;
             messages.scrollTop = messages.scrollHeight;
         };
-        
-        // Function to update camera status display
-        function updateCameraStatusDisplay(data) {
-            const cameraList = document.getElementById('camera-list');
-            cameraList.innerHTML = '';
-            
-            for (const [userId, status] of Object.entries(data.users)) {
-                const statusDiv = document.createElement('div');
-                statusDiv.className = 'camera-user-status';
-                statusDiv.innerHTML = `
-                    <span>${status.username}</span>: 
-                    <span class="${status.camera_ready ? 'ready' : 'not-ready'}">
-                        ${status.camera_ready ? '📹 Ready' : '❌ Not Ready'}
-                    </span>
-                `;
-                cameraList.appendChild(statusDiv);
-            }
-        }
-        
-        // Debug function to check if buttons are working
-        function testCameraButton() {
-            console.log('Camera button clicked!');
-            console.log('User is room creator:', window.isRoomCreator);
-        }
     </script>
     
     <!-- Load the unified module first -->

@@ -11,37 +11,98 @@ body {
     color: #333;
 }
 
-/* Navbar */
-.navbar {
+
+header {
+    width: 100%;
+    background-color: white;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 16px 24px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    position: sticky;
-    top: 0;
-    z-index: 100;
+    justify-content: space-between;
+    padding: 0 2rem;
+    height: 12vh;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .logo {
-    font-size: 24px;
-    font-weight: 600;
+    font-size: 28px;
+    font-weight: 700;
     background: linear-gradient(45deg, #667eea, #764ba2);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    margin-left: 1rem;
 }
 
-.user-avatar {
-    background: linear-gradient(45deg, #667eea, #764ba2);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
+nav {
+    display: flex;
+    align-items: center;
+    gap: 3rem;
+    padding-right: 1rem;
+}
+
+nav a {
+    text-decoration: none;
     font-weight: 500;
-    font-size: 14px;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    font-size: 18px;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    transition: opacity 0.2s ease-in-out;
+}
+
+nav a:hover {
+    opacity: 0.7;
+}
+
+.profile_container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-weight: 500;
+    color: white;
+    border: 2px solid transparent;
+    border-radius: 3rem;
+    padding: 0.3rem 1rem;
+    Cursor: pointer;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+}
+
+.dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 0.5rem;
+    display: none;
+    flex-direction: column;
+    min-width: 120px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    z-index: 100;
+}
+
+.dropdown button {
+    background: none;
+    border: none;
+    padding: 0.8rem 1rem;
+    text-align: left;
+    font-size: 16px;
+    cursor: pointer;
+    width: 100%;
+    color: #333;
+}
+
+.dropdown button:hover {
+    background: #f2f2f2;
+}
+
+.pfp {
+    height: 5vh;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    object-fit: cover;
 }
 
 /* Main Content */

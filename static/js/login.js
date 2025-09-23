@@ -1,3 +1,26 @@
+document.addEventListener("DOMContentLoaded", () => {
+const roleSelect = document.getElementById("role");
+const gradeGroup = document.getElementById("gradeGroup");
+const gradeInput = document.getElementById("registerGrade");
+
+function toggleGradeField() {
+    if (roleSelect.value === "Teacher") {
+    gradeGroup.style.display = "none";
+    gradeInput.removeAttribute("required");
+    gradeInput.value = "";
+    } else {
+    gradeGroup.style.display = "block";
+    gradeInput.setAttribute("required", "true");
+    }
+}
+
+// Run on page load
+toggleGradeField();
+
+// Run when role changes
+roleSelect.addEventListener("change", toggleGradeField);
+});
+
 function switchTab(tab) {
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
@@ -102,7 +125,6 @@ document.getElementById('registerForm').addEventListener('submit', async functio
 
     const data = {
         username: formData.get('username'),
-        email: formData.get('email'),
         password: password,
         role: formData.get('role')
     };

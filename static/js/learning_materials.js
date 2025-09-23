@@ -1,5 +1,5 @@
+// Standalone learning_materials.js - purely client-side, no socket connection needed
 let detector;
-let socketio;
 
 const content_div = document.getElementById('learning-content');
 const class_div = document.getElementById('class-content');
@@ -16,59 +16,77 @@ let currentIndex = -1;
 let currentCategory = '';
 let currentclass = null;
 
-
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize detector with main page configuration
+    // Initialize detector with standalone learning configuration
     detector = new SignLanguageDetector({
-        isRoomMode: false,
-        enableGameLogic: false,
-        enableLearningMode: true,
+        isRoomMode: false,               // No room sync needed
+        enableGameLogic: false,          // No game functionality
+        enableLearningMode: true,        // Enable learning features
         enableFpsCounter: true,
         processingInterval: 300,
         frameQuality: 0.8,
+        requireSocket: true,            // NEW: Skip socket connection entirely
         onCameraStart: function() {
-            console.log('Camera started in main translator mode');
+            console.log('Camera started in learning mode');
         },
         onCameraStop: function() {
-            console.log('Camera stopped in main translator mode');
+            console.log('Camera stopped in learning mode');
         },
         onProcessingStart: function() {
-            console.log('Processing started in main translator mode');
+            console.log('Processing started in learning mode');
         },
         onProcessingStop: function() {
-            console.log('Processing stopped in main translator mode');
+            console.log('Processing stopped in learning mode');
         },
         onLearningSuccess: function(target) {
-            console.log(`Learning success callback: ${target} performed correctly!`);
+            console.log(`Learning success: ${target} performed correctly!`);
+            // The success notification is already handled by the detector
         },
         onPrediction: function(data) {
-            // Custom prediction handling for main page if needed
-            console.log('Prediction received:', data.prediction, 'Confidence:', data.confidence);
+            // Custom prediction handling for learning mode
+            console.log('Learning prediction:', data.prediction, 'Confidence:', data.confidence);
+            updateLearningProgress(data);
         }
     });
     
-    console.log('Learning materials initialized with learning mode detector');
-});
-
-// Initialize when the page loads
-document.addEventListener('DOMContentLoaded', function() {
+    console.log('Learning materials initialized with standalone learning mode detector');
+    
+    // Initialize items after detector is ready
     initializeItems();
 });
 
+// Custom learning progress tracking
+function updateLearningProgress(data) {
+    // You can add custom learning progress indicators here
+    // The basic learning logic is already handled by the detector
+    
+    if (currentclass && data.prediction === currentclass) {
+        // Visual feedback when user is performing correct gesture
+        const predictionDiv = document.getElementById('prediction');
+        if (predictionDiv) {
+            predictionDiv.style.color = '#4CAF50'; // Green for correct
+            predictionDiv.style.fontWeight = 'bold';
+        }
+    } else {
+        const predictionDiv = document.getElementById('prediction');
+        if (predictionDiv) {
+            predictionDiv.style.color = '#333'; // Default color
+            predictionDiv.style.fontWeight = 'normal';
+        }
+    }
+}
+
 async function tryityourself() {
-    console.log("button clicked")
+    console.log("Try it yourself button clicked");
     if (content_div) {
         content_div.style.display = 'flex';
-        detector_header.textContent = ''
+        detector_header.textContent = '';
         detector_header.textContent = 'Try to perform the ' + currentCategory.charAt(0).toUpperCase() + currentCategory.slice(1).toLowerCase() + ' ' + currentclass;
         class_div.style.display = 'none';
 
         if (currentclass) {
             detector.setLearningTarget(currentclass);
             console.log(`Learning target set to: ${currentclass}`);
-
-            // Reset the detector display to show we're looking for the target
-
         }
 
         await detector.startCamera();
@@ -76,17 +94,6 @@ async function tryityourself() {
         class_div.style.display = 'none';
     }
 }
-
-function nextLetter() {
-    // Move to next letter (wrap around if at the end)
-    currentIndex = (currentIndex + 1) % letters.length;
-
-    const letter = letters[currentIndex];
-
-    // Call matcontent with the next letter's data
-    matcontent(letter.class, letter.instruction, letter.image_path, letter.category);
-}
-
 
 function closecontent() {
     if (class_div) {
@@ -122,18 +129,15 @@ function back() {
     window.location.href = '/learn/';
 }
 
-// Function to initialize the items array when the page loads
 function initializeItems() {
-    // Get all class buttons and extract their data
     const classButtons = document.querySelectorAll('.class-btn');
     currentItems = [];
     
     classButtons.forEach((button, index) => {
-        const onclick = button.getAttribute('onclick'); // get the name of onclick of each classbuttons
-        // Parse the onclick attribute to extract parameters
+        const onclick = button.getAttribute('onclick');
         const match = onclick.match(/matcontent\('([^']+)',\s*'([^']+)',\s*'([^']+)',\s*'([^']+)'\)/);   
 
-        if (match) { //separates the string and put it into individual array position
+        if (match) {
             currentItems.push({
                 class: match[1],
                 instruction: match[2],
@@ -144,18 +148,15 @@ function initializeItems() {
         }
     });
     
-    // Get category from the current page
     const pathParts = window.location.pathname.split('/');
     currentCategory = pathParts[pathParts.length - 1] || '';
     
     console.log('Initialized items:', currentItems);
 }
 
-// Modified matcontent function to track current index
 function matcontent(asl_clas, instruction, image_path, category) {
-    console.log("button clicked")
+    console.log("Material content button clicked");
     
-    // Find the current index
     currentIndex = currentItems.findIndex(item => 
         item.class === asl_clas && 
         item.instruction === instruction && 
@@ -177,18 +178,15 @@ function matcontent(asl_clas, instruction, image_path, category) {
     console.log('Current index set to:', currentIndex);
 }
 
-// Next button function
 function next() {
     if (currentItems.length === 0) {
         console.log('No items available');
         return;
     }
     
-    // Move to next item
-    currentIndex = (currentIndex + 1) % currentItems.length; // if currentindex+1 / currentitems.length == 0, return index to 0.
+    currentIndex = (currentIndex + 1) % currentItems.length;
     const nextItem = currentItems[currentIndex];
     
-    // Call matcontent with next item's data
     matcontent(
         nextItem.class,
         nextItem.instruction,
@@ -196,35 +194,18 @@ function next() {
         nextItem.category
     );
     
-    // Optional: Highlight the current button
     highlightCurrentButton();
 }
 
-// Optional: Function to highlight the current active button
-function highlightCurrentButton() {
-    // Remove previous highlights
-    currentItems.forEach(item => {
-        item.buttonElement.classList.remove('active-button');
-    });
-    
-    // Highlight current button
-    if (currentIndex >= 0 && currentIndex < currentItems.length) {
-        currentItems[currentIndex].buttonElement.classList.add('active-button');
-    }
-}
-
-// Optional: Add a previous button function as well
 function previous() {
     if (currentItems.length === 0) {
         console.log('No items available');
         return;
     }
     
-    // Move to previous item
     currentIndex = currentIndex <= 0 ? currentItems.length - 1 : currentIndex - 1;
     const prevItem = currentItems[currentIndex];
     
-    // Call matcontent with previous item's data
     matcontent(
         prevItem.class,
         prevItem.instruction,
@@ -232,13 +213,21 @@ function previous() {
         prevItem.category
     );
     
-    // Optional: Highlight the current button
     highlightCurrentButton();
 }
 
-// Optional: Add keyboard navigation
+function highlightCurrentButton() {
+    currentItems.forEach(item => {
+        item.buttonElement.classList.remove('active-button');
+    });
+    
+    if (currentIndex >= 0 && currentIndex < currentItems.length) {
+        currentItems[currentIndex].buttonElement.classList.add('active-button');
+    }
+}
+
+// Keyboard navigation
 document.addEventListener('keydown', function(event) {
-    // Only work when modal is open
     if (class_div && class_div.style.display === 'flex') {
         if (event.key === 'ArrowRight' || event.key === 'n' || event.key === 'N') {
             next();

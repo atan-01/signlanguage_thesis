@@ -5,29 +5,8 @@ from datetime import datetime
 # Create blueprint
 auth_bp = Blueprint('auth', __name__)
 
-# User class for session management
-class User:
-    def __init__(self, user_data):
-        self.id = user_data['id']
-        self.username = user_data['username']
-        self.email = user_data['email']
-        self.total_score = user_data.get('total_score', 0)
-        self.games_played = user_data.get('games_played', 0)
-        self.best_streak = user_data.get('best_streak', 0)
-        self.created_at = user_data.get('created_at')
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'username': self.username,
-            'total_score': self.total_score,
-            'games_played': self.games_played,
-            'best_streak': self.best_streak,
-            'created_at': self.created_at
-        }
-
 # Database helper functions
-def create_user(username, email, password, role):
+def create_user(username, password, role, profile_picture, grade):
     """Create a new user in Supabase"""
     supabase = current_app.config['SUPABASE']
     password_hash = generate_password_hash(password)
@@ -35,9 +14,10 @@ def create_user(username, email, password, role):
     try:
         result = supabase.table('users').insert({
             'username': username,
-            'email': email,
             'password_hash': password_hash,
-            'role': role, 
+            'role': role,
+            'profile_picture': profile_picture,
+            'grade': grade,
             'created_at': datetime.utcnow().isoformat()
         }).execute()
         
@@ -54,16 +34,6 @@ def get_user_by_username(username):
         return result.data[0] if result.data else None
     except Exception as e:
         print(f"Error getting user: {e}")
-        return None
-
-def get_user_by_email(email):
-    """Get user by email from Supabase"""
-    supabase = current_app.config['SUPABASE']
-    try:
-        result = supabase.table('users').select('*').eq('email', email).execute()
-        return result.data[0] if result.data else None
-    except Exception as e:
-        print(f"Error getting user by email: {e}")
         return None
 
 def get_user_by_id(user_id):
@@ -85,7 +55,7 @@ def index():
         user_data = get_user_by_id(user_id)
         if user_data:
             return redirect(url_for('home.home'))
-    return redirect(url_for('auth.login'))  # Redirect to /login
+    return redirect(url_for('auth.login'))
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -103,32 +73,30 @@ def login():
 
         return jsonify({'error': 'Invalid username or password'}), 401
 
-    return render_template('index.html')  # Render login form
+    return render_template('index.html')
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         data = request.get_json()
         username = data.get('username')
-        email = data.get('email')
         password = data.get('password')
         role = data.get('role')
+        grade = data.get('grade')
+        profile_picture = 'images/profile_pictures/default.jpg'
 
         if get_user_by_username(username):
             return jsonify({'error': 'Username already exists'}), 400
 
-        if get_user_by_email(email):
-            return jsonify({'error': 'Email already exists'}), 400
-
-        user_data = create_user(username, email, password, role)
+        user_data = create_user(username, password, role, profile_picture, grade)
         if user_data:
             session['user_id'] = user_data['id']
-            print(f"New user registered: {username} ({email})")
+            print(f"New user registered: {username}")
             return jsonify({'success': True, 'redirect': url_for('home.home')})
         else:
             return jsonify({'error': 'Registration failed'}), 500
 
-    return render_template('index.html')  # Could be a shared form with login
+    return render_template('index.html')
 
 @auth_bp.route('/logout')
 def logout():

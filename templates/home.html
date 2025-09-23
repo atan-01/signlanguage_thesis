@@ -5,14 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
-    <script src="{{ url_for('static', filename='js/home.js') }}" defer></script>
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar">
+    <header>
         <div class="logo">FluentHands</div>
-        <div class="user-avatar">{{ user.username }}</div>
-    </nav>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/main/">Practice</a>
+            <a href="/learn/">Learn</a>
+            <div class="profile_container" id="profileBtn">
+                <img src="{{ url_for('static', filename=user.profile_picture) }}" alt="pfp" class="pfp">
+                {{ user.username }}
+                <div class="dropdown" id="profileMenu">
+                    <button onclick="profile('{{ user.username }}')">Profile</button>
+                    <button id="logoutBtn" data-href="{{ url_for('auth.logout') }}"> Logout </button>
+                </div>
+            </div>
+                
+        </nav>
+    </header>
 
     <!-- Main Content -->
     <div class="main-content">
@@ -20,8 +31,14 @@
             <h1 class="welcome-title">Ready to connect?</h1>
             <p class="welcome-subtitle">Start or join a game</p>
         </div>
+        <!-- if game is ongoing-->
+        {% if request.args.get("msg") %}
+            <div class="alert alert-warning">
+                {{ request.args.get("msg") }}
+            </div>
+        {% endif %}
 
-        <button class="btn" onclick="mainbtn()">Translator</button>
+        <button class="btn" onclick="practicebtn()">Practice</button>
 
         <!-- Single Player Section -->
         <div class="single-player-section">
@@ -44,5 +61,41 @@
 
         <button class="learning-mats" onclick="learnasl()">Learn ASL!</button>
     </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const profileBtn = document.getElementById("profileBtn");
+            const profileMenu = document.getElementById("profileMenu");
+
+            profileBtn.addEventListener("click", function(e) {
+                e.stopPropagation();
+                profileMenu.style.display = 
+                    profileMenu.style.display === "flex" ? "none" : "flex";
+            });
+
+            // Close menu if clicking outside
+            document.addEventListener("click", function() {
+                profileMenu.style.display = "none";
+            });
+        });
+
+        function profile(username) {
+            window.location.href = `/profile/${username}`;
+        }
+
+        document.getElementById("logoutBtn").addEventListener("click", function() {
+            window.location.href = this.dataset.href;
+        });
+        function practicebtn() {
+            window.location.href = '/main/';
+        }
+
+        function learnasl() {
+            window.location.href = '/learn/';
+        }
+
+        function userprofile(username) {
+            window.location.href = `/profile/${username}`;
+        }
+    </script>
 </body>
 </html>
