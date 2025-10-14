@@ -11,7 +11,7 @@ translator_bp = Blueprint('translator', __name__, url_prefix='/main')
 
 # Sign Language Detector Class
 class WebSignLanguageDetector:
-    def __init__(self, model_path='./model_alphabetc.p', confidence_threshold=0.7):
+    def __init__(self, model_path='./model_alphabet_compare.p', confidence_threshold=0.7):
         self.model_loaded = False
         self.model_path = model_path
         
@@ -38,8 +38,8 @@ class WebSignLanguageDetector:
         self.custom_class_names = {
             '0': 'A', '1': 'B', '2': 'C', '3': 'D', '4': 'E', '5': 'F',
             '6': 'G', '7': 'H', '8': 'I', '9': 'K', '10': 'L', '11': 'M',
-            '12': 'N', '13': 'O', '14': 'P', '15': 'Q', '16': 'R', '17': 'T',
-            '18': 'U', '19': 'V', '20': 'W', '21': 'X', '22': 'Y', '23': 'ILY'
+            '12': 'N', '13': 'O', '14': 'P', '15': 'Q', '16': 'R', '17': 'S',
+            '18': 'T', '19': 'U', '20': 'V', '21': 'W', '22': 'X', '23': 'Y'
         }
 
     def load_model(self):

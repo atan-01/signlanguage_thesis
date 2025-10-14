@@ -1,0 +1,267 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: "Gantari", sans-serif;
+    overflow: hidden;
+    background-image: url('../images/bg_alphabet.png');
+    min-height: 100vh;
+}
+
+header {
+    width: 100%;
+    background-color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    height: 12vh;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.logo {
+    font-size: 28px;
+    font-weight: 700;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-left: 1rem;
+}
+
+nav {
+    display: flex;
+    align-items: center;
+    gap: 3rem;
+    padding-right: 5rem;
+}
+
+nav a {
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 18px;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    transition: opacity 0.2s ease-in-out;
+}
+
+nav a:hover {
+    opacity: 0.7;
+}
+
+.profile_container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    color: white;
+    border: 2px solid transparent;
+    border-radius: 3rem;
+    padding: 0.2rem 1rem;
+    Cursor: pointer;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+}
+
+.dropdown {
+    position: absolute;
+    top: 100%;  /* directly below profile_container */
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 0.5rem;
+    display: none;
+    flex-direction: column;
+    min-width: 120px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    z-index: 100;
+}
+
+.dropdown button {
+    background: none;
+    border: none;
+    padding: 0.8rem 1rem;
+    text-align: left;
+    font-size: 16px;
+    cursor: pointer;
+    width: 100%;
+    color: #333;
+}
+
+.dropdown button:hover {
+    background: #f2f2f2;
+}
+
+.pfp {
+    height: 5vh;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Room details page styling */
+.room-details-container {
+    background: white;
+    border-radius: 1rem;
+    padding: 2rem;
+    margin: 2rem auto;
+    max-width: 50rem;
+    width: 90vw;
+    max-height: 80vh;
+    box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    margin-top: 7vh;
+}
+
+.room-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 0.1rem solid #eee;
+    flex-shrink: 0;
+}
+
+.room-header h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 0.8rem 0;
+}
+
+.room-header h3 {
+    font-size: 1rem;
+    color: #666;
+    font-weight: 500;
+    margin: 0.3rem 0;
+}
+
+.room-header p {
+    font-size: 1rem;
+    color: #888;
+    margin: 0.3rem 0;
+}
+
+.participants-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.participants-section h3 {
+    font-size: 1.3rem;
+    color: #444;
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+}
+
+.participants-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex: 1;
+    overflow-y: auto;
+    max-height: 40vh;
+}
+
+.participant-item {
+    background: #f8f9ff;
+    border: 0.1rem solid #e8eaff;
+    border-radius: 0.6rem;
+    padding: 1rem 1.2rem;
+    margin-bottom: 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.participant-item:hover {
+    background: #f0f2ff;
+    border-color: #d0d5ff;
+    transform: translateY(-0.1rem);
+    box-shadow: 0 0.2rem 0.6rem rgba(102, 126, 234, 0.1);
+}
+
+.participant-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.participant-score {
+    font-size: 0.9rem;
+    font-weight: 500;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.back-button {
+    display: inline-block;
+    margin-top: 1.5rem;
+    padding: 0.7rem 1.8rem;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    text-decoration: none;
+    border-radius: 2rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    align-self: flex-start;
+}
+
+.back-button:hover {
+    transform: translateY(-0.2rem);
+    box-shadow: 0 0.5rem 1.5rem rgba(102, 126, 234, 0.3);
+}
+
+.type_material {
+    display: flex;
+    justify-content: center;
+    text-align: center;
+    align-items: center;
+    gap: 1rem;
+    font-weight: 500;
+    color: #666;
+}
+
+/* Responsive adjustments */
+@media (max-width: 48rem) {
+    .room-details-container {
+        padding: 1.5rem;
+        margin: 1rem auto;
+        width: 95vw;
+        max-height: 85vh;
+    }
+    
+    .room-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .room-header h3 {
+        font-size: 1rem;
+    }
+    
+    .participants-list {
+        max-height: 35vh;
+    }
+    
+    .participant-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.4rem;
+    }
+    
+    .participant-score {
+        align-self: flex-end;
+    }
+}

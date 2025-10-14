@@ -1,4 +1,4 @@
-// Standalone learning_materials.js - purely client-side, no socket connection needed
+// Enhanced learning_materials.js with alphabet/number model support
 let detector;
 
 const content_div = document.getElementById('learning-content');
@@ -16,16 +16,17 @@ let currentIndex = -1;
 let currentCategory = '';
 let currentclass = null;
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize detector with standalone learning configuration
+document.addEventListener('DOMContentLoaded', async function() {
+    // Initialize detector with client-side processing for learning mode
     detector = new SignLanguageDetector({
-        isRoomMode: false,               // No room sync needed
-        enableGameLogic: false,          // No game functionality
-        enableLearningMode: true,        // Enable learning features
+        isRoomMode: false,
+        enableGameLogic: false,
+        enableLearningMode: true,
         enableFpsCounter: true,
+        useClientSideProcessing: true,  // 🔥 CRITICAL: Use client-side processing
         processingInterval: 300,
         frameQuality: 0.8,
-        requireSocket: true,            // NEW: Skip socket connection entirely
+        requireSocket: false,  // 🔥 CRITICAL: No socket needed for learning
         onCameraStart: function() {
             console.log('Camera started in learning mode');
         },
@@ -33,44 +34,82 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Camera stopped in learning mode');
         },
         onProcessingStart: function() {
-            console.log('Processing started in learning mode');
+            console.log('Processing started in learning mode - CLIENT SIDE');
         },
         onProcessingStop: function() {
             console.log('Processing stopped in learning mode');
         },
         onLearningSuccess: function(target) {
             console.log(`Learning success: ${target} performed correctly!`);
-            // The success notification is already handled by the detector
         },
         onPrediction: function(data) {
-            // Custom prediction handling for learning mode
             console.log('Learning prediction:', data.prediction, 'Confidence:', data.confidence);
             updateLearningProgress(data);
         }
     });
     
-    console.log('Learning materials initialized with standalone learning mode detector');
+    console.log('Learning materials initialized with client-side processing');
     
-    // Initialize items after detector is ready
+    // Initialize items and load appropriate model
     initializeItems();
+    
+    // Wait for model to load before allowing camera interaction
+    await loadModelForCategory();
+    
+    // Verify client-side processing is active
+    if (detector.isClientSideProcessing()) {
+        console.log('✅ Client-side processing confirmed active');
+    } else {
+        console.error('❌ Client-side processing NOT active - check initialization');
+    }
 });
 
-// Custom learning progress tracking
-function updateLearningProgress(data) {
-    // You can add custom learning progress indicators here
-    // The basic learning logic is already handled by the detector
+async function loadModelForCategory() {
+    /**
+     * Load the appropriate model based on current category
+     */
+    if (!detector || !detector.clientSideClassifier) {
+        console.error('Detector or classifier not initialized');
+        return;
+    }
     
+    // Determine model type from URL path
+    const pathParts = window.location.pathname.split('/');
+    currentCategory = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2] || '';
+    
+    let modelType = 'alphabet'; // default
+    
+    if (currentCategory.toLowerCase().includes('number')) {
+        modelType = 'number';
+    } else if (currentCategory.toLowerCase().includes('alphabet') || 
+               currentCategory.toLowerCase().includes('letter')) {
+        modelType = 'alphabet';
+    }
+    
+    console.log(`Loading ${modelType} model for category: ${currentCategory}`);
+    
+    const success = await detector.setModelType(modelType);
+    
+    if (success) {
+        console.log(`${modelType} model loaded successfully`);
+    } else {
+        console.error(`Failed to load ${modelType} model`);
+        alert(`Failed to load ${modelType} recognition model. Please refresh the page.`);
+    }
+}
+
+function updateLearningProgress(data) {
     if (currentclass && data.prediction === currentclass) {
         // Visual feedback when user is performing correct gesture
         const predictionDiv = document.getElementById('prediction');
         if (predictionDiv) {
-            predictionDiv.style.color = '#4CAF50'; // Green for correct
+            predictionDiv.style.color = '#4CAF50';
             predictionDiv.style.fontWeight = 'bold';
         }
     } else {
         const predictionDiv = document.getElementById('prediction');
         if (predictionDiv) {
-            predictionDiv.style.color = '#333'; // Default color
+            predictionDiv.style.color = '#333';
             predictionDiv.style.fontWeight = 'normal';
         }
     }
@@ -81,7 +120,13 @@ async function tryityourself() {
     if (content_div) {
         content_div.style.display = 'flex';
         detector_header.textContent = '';
-        detector_header.textContent = 'Try to perform the ' + currentCategory.charAt(0).toUpperCase() + currentCategory.slice(1).toLowerCase() + ' ' + currentclass;
+        
+        // Ensure correct model is loaded before starting
+        await loadModelForCategory();
+        
+        const categoryDisplay = currentCategory.charAt(0).toUpperCase() + 
+                               currentCategory.slice(1).toLowerCase();
+        detector_header.textContent = `Try to perform the ${categoryDisplay} ${currentclass}`;
         class_div.style.display = 'none';
 
         if (currentclass) {
@@ -117,7 +162,7 @@ function closedetector() {
     }
 }
 
-blur_overlay.addEventListener('click', () =>{
+blur_overlay.addEventListener('click', () => {
     closecontent();
     closedetector();
     currentItems.forEach(item => {
@@ -152,6 +197,7 @@ function initializeItems() {
     currentCategory = pathParts[pathParts.length - 1] || '';
     
     console.log('Initialized items:', currentItems);
+    console.log('Current category:', currentCategory);
 }
 
 function matcontent(asl_clas, instruction, image_path, category) {

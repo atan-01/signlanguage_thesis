@@ -124,7 +124,7 @@ body, html {
     background-color: #f9d52392;
     justify-self: center;
     height: 45%;
-    width: 80%;
+    width: 70%;
 }
 
 #videoElement {
@@ -148,6 +148,44 @@ body, html {
     display: flex;
     align-items: center;
     height: 5%;
+    justify-content: space-between;
+}
+
+.timer_container {
+    display: flex;
+    padding-left: 15%;
+    color: white;
+    font-family: "Gantari", sans-serif;
+    font-weight: 600;
+}
+
+.timer_display {
+    padding-left: 1%;
+}
+
+.skip {
+    font-family: "Gantari", sans-serif;
+    border-radius: 0.5rem;
+    padding: 0.5rem 2rem;
+    margin-left: 3rem;
+    color: #5C18EB;
+    background-color: white;
+    border: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.skip:hover {
+    background-color: #f0f0f0;
+}
+
+.skip:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.skip.hidden {
+    display: none;
 }
 
 .button_container {
@@ -408,19 +446,6 @@ body, html {
     border: 0;
 }
 
-.timer_container {
-    display: flex;
-    width: 100%;
-    padding-left: 15%;
-    color: white;
-    font-family: "Gantari", sans-serif;
-    font-weight: 600;
-}
-
-.timer_display {
-    padding-left: 1%;
-}
-
 .creator-participate-overlay {
     position: fixed;
     top: 0;
@@ -529,25 +554,13 @@ body, html {
     font-family: "Gantari", sans-serif;
 }
 
-.gametime{
-    margin-top: 1vh;
-    color: #ca0000;
-    border: 2px solid #5C18EB;
-    padding: 1vh;
-    padding-left: 3vh;
-    border-radius: 1vh;
-    font-family: "Gantari", sans-serif;
-    font-size: small;
-    width: 50%;
-    margin-left: 1vh;
-    margin-top: 3vh;
+.select-container {
+    display: flex;
+    gap: 1rem; /* space between the two dropdowns */
+    align-items: center;
 }
 
-.gametime select:focus {
-    border-color: #5C18EB;
-}
-
-.gametime select {
+.select-model select {
     background-color: #f8f9ff;        
     color: #333;                      
     border: 0.0625rem solid #5C18EB;  
@@ -560,13 +573,55 @@ body, html {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C18EB' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 0.5rem center;
-    background-size: 0.75rem;
     padding-right: 2rem;
-    min-width: 6rem;
-    max-width: 10rem;
+    min-width: 8rem;
+    max-width: 12rem;
+}
+
+.select-model select:focus {
+    border-color: #5C18EB;
+    box-shadow: 0 0 3px rgba(92, 24, 235, 0.4);
+}
+.gametime {
+  margin-top: 3vh;
+  color: #ca0000;
+  border: 2px solid #5C18EB;
+  border-radius: 1vh;
+  font-family: "Gantari", sans-serif;
+  font-size: small;
+  width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1vh;
+  gap: 1rem;
+}
+
+.gametime select {
+  flex: 1;
+  width: 100%;
+  background-color: #f8f9ff;
+  color: #333;
+  border: 0.0625rem solid #5C18EB;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  font-family: "Gantari", sans-serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  outline: none;
+  padding-right: 2rem;
+  box-sizing: border-box;
+  /* arrow  */
+  appearance: auto;
+  -webkit-appearance: menulist;
+  -moz-appearance: menulist;
+}
+
+.gametime select:focus {
+  border-color: #5C18EB;
+  background-color: white;
 }
 
 .douwant{
@@ -809,58 +864,6 @@ input[type="radio"] {
     background-color: #45a049;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 h2 {
     text-align: center;
     margin: 10px 0;
@@ -912,16 +915,6 @@ h2 {
     font-family: "Gantari", sans-serif;
 }
 
-
-
-
-
-
-
-
-
-
-
 /* Responsive design */
 @media (max-width: 1200px) {
     .room-container {
@@ -933,3 +926,4 @@ h2 {
         height: 500px;
     }
 }
+

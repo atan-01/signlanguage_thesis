@@ -1,4 +1,6 @@
-# Updated socketio_events.py - Process landmarks with your actual RandomForest model
+# Updated socketio_events.py - Simplified for room/translator only
+# Learning materials no longer need server processing!
+
 from flask import session, current_app, request, jsonify
 from flask_socketio import emit, join_room, leave_room, send
 import numpy as np
@@ -145,13 +147,11 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         user_id = session.get('user_id')
         room = session.get('room')
         
-        print(f"CONNECT: User {user_id}, Session ID: {request.sid}, Room: {room}") # debug
+        print(f"CONNECT: User {user_id}, Session ID: {request.sid}, Room: {room}")
         
         if not user_id:
-            print(f"No user_id in session for {request.sid}") #debug
+            print(f"No user_id in session for {request.sid}")
             return False
-
-
 
         if not user_id:
             return False
@@ -166,7 +166,7 @@ def init_all_socketio_events(socketio, supabase, detector=None):
             return False
         
         model_loaded = detector.model_loaded if detector else False
-        emit('status', {'message': 'Connected - Landmarks processing enabled', 'model_loaded': model_loaded})
+        emit('status', {'message': 'Connected - Server processing available', 'model_loaded': model_loaded})
 
     @socketio.on('disconnect')
     def handle_disconnect():
@@ -245,7 +245,7 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         check_camera_readiness(room, rooms)
 
         model_loaded = detector.model_loaded if detector else False
-        emit('status', {'message': 'Connected - Landmarks processing', 'model_loaded': model_loaded}, to=request.sid)
+        emit('status', {'message': 'Connected - Server processing', 'model_loaded': model_loaded}, to=request.sid)
 
         game_type = rooms[room].get('game_type')
         duration = rooms[room].get('duration', 30)
@@ -369,8 +369,8 @@ def init_all_socketio_events(socketio, supabase, detector=None):
                 if "final_scores" not in rooms[room]:
                     rooms[room]["final_scores"] = {}
                 rooms[room]["final_scores"][user_id] = data['final_score']
-                print(f"Stored score for user {user_id}: {data['final_score']}")  # DEBUG
-                print(f"Current final_scores: {rooms[room]['final_scores']}")  
+                print(f"Stored score for user {user_id}: {data['final_score']}")
+                print(f"Current final_scores: {rooms[room]['final_scores']}")
 
             save_game_results(room)
 
@@ -401,46 +401,12 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         if room in rooms:
             del rooms[room]
 
-    # ===== LANDMARKS PROCESSING EVENTS (NEW) =====
+    # ===== TRANSLATOR/SERVER PROCESSING EVENTS =====
+    # Only used when client-side processing is NOT enabled (translator page)
     
-    @socketio.on('process_landmarks_room')
-    def handle_room_landmarks(data):
-        """Handle landmark processing in room context"""
-        room = session.get("room")
-        if not room or room not in rooms or not detector:
-            emit('error', {'message': 'Room not found or detector not available'})
-            return
-            
-        try:
-            landmarks_data = data.get('landmarks')
-            
-            if landmarks_data is None:
-                # No hands detected
-                emit('prediction_result', {
-                    'prediction': 'No gesture',
-                    'confidence': 0
-                })
-                return
-            
-            # Process landmarks using your actual model
-            processed_features = process_landmarks_for_prediction(landmarks_data)
-            
-            if processed_features is not None:
-                result = detector.process_landmarks(processed_features)
-                emit('prediction_result', result)
-            else:
-                emit('prediction_result', {
-                    'prediction': 'No gesture',
-                    'confidence': 0
-                })
-            
-        except Exception as e:
-            print(f"Error processing landmarks in room: {e}")
-            emit('error', {'message': str(e)})
-
     @socketio.on('join_translator')
     def handle_join_translator():
-        """Join a translator session"""
+        """Join a translator session (uses server processing)"""
         user_id = session.get('user_id')
         if not user_id:
             return False
@@ -453,7 +419,7 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         join_room(translator_room)
         
         model_loaded = detector.model_loaded if detector else False
-        emit('status', {'message': 'Connected to translator - Landmarks processing', 'model_loaded': model_loaded})
+        emit('status', {'message': 'Connected to translator - Server processing', 'model_loaded': model_loaded})
         print(f"User {user_data['username']} joined translator")
 
     @socketio.on('leave_translator')
@@ -467,7 +433,10 @@ def init_all_socketio_events(socketio, supabase, detector=None):
 
     @socketio.on('process_landmarks_translator')
     def handle_translator_landmarks(data):
-        """Handle landmark processing for translator use"""
+        """
+        Handle landmark processing for TRANSLATOR only
+        (Learning materials use client-side processing now)
+        """
         if not detector:
             emit('error', {'message': 'Detector not available'})
             return
@@ -497,7 +466,22 @@ def init_all_socketio_events(socketio, supabase, detector=None):
             print(f"Error processing landmarks in translator: {e}")
             emit('error', {'message': str(e)})
 
-    print("SocketIO events initialized - landmarks processing enabled")
+    # NOTE: Removed 'process_landmarks_room' - rooms now use client-side processing!
+    # If you need server processing for rooms in the future, add it back
+
+    print("SocketIO events initialized")
+    print("✅ Server processing available for: translator")
+    print("✅ Client-side processing used by: rooms, learning materials")
+
+    @socketio.on('set_learning_material')
+    def handle_set_learning_material(data):
+        room = session.get('room')
+        learning_material = data.get('learningMaterial')
+        print("eto yung learning material: ", learning_material)
+        if room in rooms:
+            rooms[room]['learning_material'] = learning_material
+            print(f"✅ Room {room}: Learning material set to {learning_material}")
+
 
 ###########################################################################################################
 
@@ -557,7 +541,7 @@ def save_game_results(room):
         room_id = room_result.data[0]['id']
         creator_id = room_result.data[0]['creator_id']
         creator_participated = rooms[room].get('creator_participated', True)
-        
+
         # Save all scores
         for user_id, final_score in rooms[room]["final_scores"].items():
             if user_id == creator_id and not creator_participated:
@@ -574,6 +558,7 @@ def save_game_results(room):
         # Mark as saved and clear for next game
         rooms[room]["scores_saved"] = True
         rooms[room]["final_scores"] = {}
+
         print(f"All scores saved and cleared for room {room}")
             
     except Exception as e:
@@ -589,16 +574,20 @@ def save_game_instance_to_db(room):
         creator_username = rooms[room].get("creator", "Unknown")
         creator_data = get_user_by_username(creator_username, supabase) if creator_username != "Unknown" else None
         creator_id = creator_data['id'] if creator_data else None
-        
+        learning_material = rooms[room].get("learning_material", "alphabet")
+
         # Insert new game instance
         supabase.table('rooms').insert({
             'room_code': room,
             'game_type': rooms[room].get('game_type', 'Unknown'),
-            'duration': rooms[room].get('duration', 30),  # Add this
+            'duration': rooms[room].get('duration', 30),
             'total_participants': len(rooms[room].get('participants', [])),
-            'creator_id': creator_id
+            'creator_id': creator_id,
+            'learning_material': learning_material
         }).execute()
         print(f"New game instance saved for room {room}")
+        
+        rooms[room].pop("learning_material", None)
         
     except Exception as e:
         print(f"Error saving game instance: {e}")

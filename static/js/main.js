@@ -26,30 +26,12 @@ document.addEventListener('DOMContentLoaded', function() {
         onPrediction: function(data) {
             // Custom prediction handling for main translator
             console.log('Prediction received:', data.prediction, 'Confidence:', data.confidence);
-            
-            // You can add custom UI updates here if needed
-            updateTranslatorDisplay(data);
         }
     });
     
     console.log('Standalone translator initialized - no server communication needed');
 });
 
-// Custom UI update function for translator
-function updateTranslatorDisplay(data) {
-    // Add any custom display logic here
-    // The basic prediction display is already handled by the detector
-    
-    // Example: Custom confidence color coding
-    const confidenceBar = document.getElementById('confidenceBar');
-    if (confidenceBar) {
-        const confidence = Math.round(data.confidence * 100);
-        if (confidence > 70) {
-            confidenceBar.style.backgroundColor = '#4CAF50'; // Green
-        } else if (confidence > 40) {
-            confidenceBar.style.backgroundColor = '#FF9800'; // Orange
-        } else {
-            confidenceBar.style.backgroundColor = '#F44336'; // Red
-        }
-    }
+function profile(username) {
+    window.location.href = `/profile/${username}`;
 }

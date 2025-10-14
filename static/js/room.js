@@ -10,6 +10,8 @@ let selectedGameTime = 30;
 let gameduration;
 let gameTimerInterval = null;
 let isGameEnding = false;
+let skipsRemaining = 2;
+let selectedLearningMaterial = 'alphabet'; // learning material as in model na gagamitin
 
 const gamemodeimages = [
     '/static/images/gm_timestarts.png',
@@ -35,14 +37,15 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Initialize detector with client-side processing
+    // Initialize detector with CLIENT-SIDE processing for rooms
     detector = new SignLanguageDetector({
         isRoomMode: true,
         enableGameLogic: true,
-        enableClientSideProcessing: true, // All processing on client
+        useClientSideProcessing: true, // 🔥 This is the key change!
         enableFpsCounter: false,
-        processingInterval: 300,
+        processingInterval: 300, // Can keep this lower since no server overload
         participate: participate,
+        gameMode: 'time_starts', // Default mode, will be updated when game type is set
         onCameraStart: function() {
             console.log('Camera started in room mode');
         },
@@ -50,18 +53,20 @@ window.addEventListener('DOMContentLoaded', () => {
             console.log('Camera stopped in room mode');
         },
         onProcessingStart: function() {
-            console.log('Processing started in room mode');
+            console.log('Processing started in room mode - CLIENT SIDE!');
         },
         onProcessingStop: function() {
             console.log('Processing stopped in room mode');
         }
     });
 
-    // Socket is now only for game synchronization
+    // Socket is now ONLY for game synchronization - no heavy processing!
     socketio = detector.socketio;
     socketio.emit('join_room', { room: ROOM_CODE, name: USERNAME });
 
-    // Setup minimal room sync handlers
+    updateSkipButton();
+
+    // Setup minimal room sync handlers (no landmark processing)
     setupRoomSocketHandlers();
 });
 
@@ -95,7 +100,7 @@ function setupRoomSocketHandlers() {
     });
 
     // Game synchronization events
-    socketio.on('game_type_set', (data) => {
+    socketio.on('game_type_set', async (data) => {
         display_gamemode.textContent = '';
         selectedGameTime = data.duration;
         display_gamemode.style.backgroundImage = `url(${gamemodeimages[data.gamemode_index]})`;
@@ -104,9 +109,56 @@ function setupRoomSocketHandlers() {
         timer_div.textContent = data.duration + 's';
         gameduration = data.duration;
         document.getElementById('game-type-display').style.fontSize = "2rem";
+        
+        // Get learning material from data (if provided by creator)
+        if (data.learning_material) {
+            selectedLearningMaterial = data.learning_material;
+            console.log(`🎮 Game will use ${selectedLearningMaterial} model`);
+        }
+        
+        // Set the game mode in detector
+        const gameModeMap = {
+            'Timer Starts': 'time_starts',
+            'Fill in the Blanks': 'fill_blanks',
+            'Ghost Sign': 'ghost_sign'
+        };
+        
+        if (detector && gameModeMap[data.type]) {
+            await detector.setGameMode(gameModeMap[data.type]);
+        }
+        
+        // Load appropriate model for this game
+        if (detector && detector.clientSideClassifier) {
+            if (selectedLearningMaterial !== 'words') {
+                console.log(`📥 Loading ${selectedLearningMaterial} model for game...`);
+                const success = await detector.setModelType(selectedLearningMaterial);
+                
+                if (success) {
+                    console.log(`✅ Game will use ${selectedLearningMaterial} model`);
+                    
+                    // Update detector's class names based on material type
+                    if (selectedLearningMaterial === 'number') {
+                        detector.asl_classes = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+                        console.log('🔢 Using numbers as target classes');
+                    } else if (selectedLearningMaterial === 'alphabet') {
+                        detector.customClassNames = {
+                            '0': 'A', '1': 'B', '2': 'C', '3': 'D', '4': 'E', '5': 'F',
+                            '6': 'G', '7': 'H', '8': 'I', '9': 'K', '10': 'L', '11': 'M',
+                            '12': 'N', '13': 'O', '14': 'P', '15': 'Q', '16': 'R', '17': 'S',
+                            '18': 'T', '19': 'U', '20': 'V', '21': 'W', '22': 'X', '23': 'Y'
+                        };
+                        detector.asl_classes = Object.values(detector.customClassNames);
+                        console.log('🔤 Using alphabet as target classes');
+                    }
+                } else {
+                    console.error(`❌ Failed to load ${selectedLearningMaterial} model`);
+                    alert(`Warning: Could not load ${selectedLearningMaterial} model`);
+                }
+            }
+        }
+        
         tryEnableStartGameButton();
     });
-
     socketio.on('start_game_countdown', function(){
         game_countdown.style.position = 'fixed';
         game_countdown.style.display = 'flex';
@@ -132,6 +184,8 @@ function setupRoomSocketHandlers() {
         const stopBtn = document.getElementById('stopBtn');
         
         isGameEnding = false;
+        skipsRemaining = 2; // Reset skips at game start
+        updateSkipButton();
         
         if (!participate) {
             document.getElementById('leaderboard').style.display = 'flex';
@@ -143,6 +197,7 @@ function setupRoomSocketHandlers() {
         
         // Reset game state - all processing happens locally now
         detector.resetScore();
+        detector.startGame();
         detector.startProcessing(); // Client-side processing only
 
         let timeLeft = selectedGameTime;
@@ -238,6 +293,9 @@ function endGameCleanup() {
     const stopBtn = document.getElementById('stopBtn');
     if (stopBtn) stopBtn.disabled = false;
     
+    skipsRemaining = 2;
+    updateSkipButton();
+
     // Show alert only once
     alert("Time's up!");
     
@@ -285,6 +343,8 @@ const waiting_to_start = document.querySelector('.waiting_to_start');
 const game_countdown = document.getElementById('game-countdown');
 const participants_container = document.querySelector('.participants-container'); 
 const btn_closeleaderboard = document.querySelector('.btn_closeleaderboard');
+const selectModelDropdown = document.getElementById('select-model');
+const gameTimeSelect = document.getElementById('game-time');
 
 // Room-specific functions
 function updategamemodeimage() {
@@ -292,19 +352,57 @@ function updategamemodeimage() {
     modenamediv.textContent = gamemodenames[gamemodeindex];
 }
 
-btn_prev.addEventListener('click', () => {
+btn_next.addEventListener('click', function(e) {
+    gamemodeindex = (gamemodeindex + 1) % gamemodeimages.length;
+    updategamemodeimage();
+});
+
+btn_prev.addEventListener('click', function(e) {
     gamemodeindex = (gamemodeindex - 1 + gamemodeimages.length) % gamemodeimages.length;
     updategamemodeimage();
 });
 
-btn_next.addEventListener('click', () => {
-    gamemodeindex = (gamemodeindex + 1) % gamemodeimages.length;
-    updategamemodeimage();
-})
-
 function handleConfirmButton() {
+    console.log('🔍 CONFIRM BUTTON CLICKED - Validating settings...');
+    
+    // VALIDATION 1: Check if learning material is selected
+    if (!selectedLearningMaterial || selectedLearningMaterial === '' || selectModelDropdown.value === '') {
+        alert('❌ ERROR: Please select a learning material (Alphabet, Numbers, or Words)');
+        console.error('❌ Validation failed: No learning material selected');
+        return false;
+    }
+    
+    // VALIDATION 2: Check if game time is selected
+    const gameTimeValue = gameTimeSelect.value;
+    if (!gameTimeValue || gameTimeValue === '') {
+        alert('❌ ERROR: Please select a game time');
+        console.error('❌ Validation failed: No game time selected');
+        return false;
+    }
+    selectedGameTime = parseInt(gameTimeValue);
+    
     const participateRadio = document.getElementById('flexRadioDefault1');
     const notParticipateRadio = document.getElementById('flexRadioDefault2');
+    
+    // VALIDATION 3: Check if participation is selected
+    if (!participateRadio.checked && !notParticipateRadio.checked) {
+        alert('❌ ERROR: Please select whether you want to participate or not');
+        console.error('❌ Validation failed: Participation not selected');
+        return false;
+    }
+    
+    // VALIDATION 4: Check learning material & game mode compatibility
+    const selectedGameType = modenamediv.textContent;
+    const isTimerStarts = selectedGameType === 'Timer Starts' || gamemodeindex === 0;
+    
+    if ((selectedLearningMaterial === 'number' || selectedLearningMaterial === 'words') && !isTimerStarts) {
+        alert(`❌ ERROR: ${selectedLearningMaterial.charAt(0).toUpperCase() + selectedLearningMaterial.slice(1)} only supports "Timer Starts" game mode!\n\nPlease select "Timer Starts" before confirming.`);
+        console.error(`❌ Validation failed: Invalid combination - ${selectedLearningMaterial} with ${selectedGameType}`);
+        return false;
+    }
+    
+    console.log('✅ All validations passed! Proceeding with game setup...');
+    
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
     
@@ -315,13 +413,15 @@ function handleConfirmButton() {
         if (startBtn) startBtn.disabled = false;
         if (stopBtn) stopBtn.disabled = false;
         socketio.emit('camera_stopped');
-        console.log('User chose to participate');
+        updateSkipButton();
+        console.log('✅ User chose to participate');
     } else if (notParticipateRadio.checked) {
         participate = false;
         socketio.emit('creator_participation', { participates: false });
         detector.setParticipation(false);
         if (startBtn) startBtn.disabled = true;
         if (stopBtn) stopBtn.disabled = true;
+        updateSkipButton();
         if (detector.stream) {
             detector.stream.getTracks().forEach(track => track.stop());
             detector.stream = null;
@@ -330,7 +430,7 @@ function handleConfirmButton() {
             detector.elements.videoElement.srcObject = null;
         }
 
-        if(stopBtn){
+        if (stopBtn) {
             stopBtn.className = "btn";
             stopBtn.textContent = "Start Camera";
             stopBtn.disabled = true;
@@ -338,25 +438,28 @@ function handleConfirmButton() {
         }
  
         socketio.emit('camera_ready');
-        console.log('User chose not to participate - Camera ready event sent to server');
+        console.log('✅ User chose not to participate');
     }
     
-    const gameTimeSelect = document.getElementById('game-time');
-    selectedGameTime = parseInt(gameTimeSelect.value);
-    
     let selectedType = modenamediv.textContent;
+    
+    // Emit game settings with learning material
     socketio.emit('set_game_type_and_time', { 
         type: selectedType,
         duration: selectedGameTime,
-        gamemode_index: gamemodeindex
+        gamemode_index: gamemodeindex,
+        learning_material: selectedLearningMaterial
     });
     
     document.getElementById('creator-participate').style.display = 'none';
-    console.log('Settings confirmed:', {
+    console.log('✅ Settings confirmed:', {
         participate: participate,
         gameTime: selectedGameTime,
-        gameType: selectedType
+        gameType: selectedType,
+        learningMaterial: selectedLearningMaterial
     });
+    
+    return true;
 }
 
 // Other room functions
@@ -372,8 +475,11 @@ btn_close.addEventListener('click', () => {
     document.getElementById('creator-participate').style.display = 'none';
 });
 
-btn_confirm.addEventListener('click', handleConfirmButton);
-
+if (btn_confirm) {
+    btn_confirm.removeEventListener('click', handleConfirmButton); // Remove old listeners
+    btn_confirm.addEventListener('click', handleConfirmButton); // Add new listener
+    console.log('✅ Confirm button listener attached');
+}
 function openGameModeOverlay() {
     if (window.isRoomCreator) {
         const overlay = document.getElementById('creator-participate');
@@ -456,6 +562,42 @@ function updateCameraStatusDisplay(data) {
     tryEnableStartGameButton();
 }
 
+function updateSkipButton() {
+    const skipBtn = document.querySelector('.skip');
+    if (!skipBtn) return;
+    
+    if (!participate) {
+        skipBtn.style.display = 'none';
+    } else {
+        skipBtn.style.display = 'block';
+        skipBtn.textContent = `Skip = ${skipsRemaining}`;
+        
+        if (skipsRemaining === 0) {
+            skipBtn.disabled = true;
+            skipBtn.style.opacity = '0.5';
+            skipBtn.style.cursor = 'not-allowed';
+        } else {
+            skipBtn.disabled = false;
+            skipBtn.style.opacity = '1';
+            skipBtn.style.cursor = 'pointer';
+        }
+    }
+}
+
+function skip() {
+    if (skipsRemaining > 0 && participate) {
+        skipsRemaining--;
+        updateSkipButton();
+        
+        // Generate new target letter without adding points
+        if (detector && detector.generateNewTarget) {
+            detector.generateNewTarget();
+        }
+        
+        console.log(`Skipped! ${skipsRemaining} skips remaining`);
+    }
+}
+
 function exitroom() {
     console.log('Immediate exit initiated...');
     
@@ -495,6 +637,79 @@ if (startGameButton) {
         startGameButton.disabled = true;
         startGame();
     });
+}
+
+if (selectModelDropdown) {
+    selectModelDropdown.addEventListener('change', async function(event) {
+        selectedLearningMaterial = event.target.value;
+        console.log(`Learning material selected: ${selectedLearningMaterial}`);
+        
+        // Handle game mode restrictions
+        if (selectedLearningMaterial === 'number' || selectedLearningMaterial === 'words') {
+            // Force Timer Starts gamemode
+            gamemodeindex = 0;
+            updategamemodeimage();
+            console.log(`⚠️ ${selectedLearningMaterial} only supports Timer Starts mode`);
+        }
+        
+        if (selectedLearningMaterial === 'words') {
+            console.log('Words model - skipping for now as requested');
+            return;
+        }
+        
+        // Pre-load the model when creator selects it
+        if (detector && detector.clientSideClassifier) {
+            console.log(`Pre-loading ${selectedLearningMaterial} model...`);
+            const success = await detector.setModelType(selectedLearningMaterial);
+            
+            if (success) {
+                console.log(`✅ ${selectedLearningMaterial} model pre-loaded successfully`);
+                showModelLoadedNotification(selectedLearningMaterial);
+                console.log("🎯 Emitting learning material:", selectedLearningMaterial);
+                socketio.emit('set_learning_material', {learningMaterial: selectedLearningMaterial });
+            } else {
+                console.error(`❌ Failed to pre-load ${selectedLearningMaterial} model`);
+                alert(`Failed to load ${selectedLearningMaterial} model. Please check that the model file exists at /static/models/${selectedLearningMaterial}/asl_randomforest.json`);
+                selectModelDropdown.value = ''; // Reset dropdown
+                selectedLearningMaterial = 'alphabet'; // Reset to default
+            }
+        } else {
+            console.error('Detector or classifier not available yet');
+        }
+    });
+}
+
+function showModelLoadedNotification(modelType) {
+    /**
+     * Show visual feedback when model is loaded
+     */
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #4CAF50, #45a049);
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        z-index: 5000;
+        font-size: 14px;
+        font-weight: bold;
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    const modelDisplay = modelType.charAt(0).toUpperCase() + modelType.slice(1);
+    notification.textContent = `✅ ${modelDisplay} model loaded`;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-in';
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 2000);
 }
 
 // Cleanup

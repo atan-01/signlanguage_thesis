@@ -94,9 +94,9 @@
                     Timer:
                     <div class="timer_display" id="timer_display"><!--display ng piniling timer--></div>
                 </div>
+                <button class="skip" onclick="skip()"> Skip = 2 </button>
                 <div class="button_container">
                     <button id="startBtn" class="btn">Start Camera</button>
-                    <!-- button id="stopBtn" class="btn danger" disabled>Stop Camera</button -->
                 </div>
             </div>
 
@@ -129,18 +129,34 @@
                         <span class="room_key"> 🔑   {{ room_code }} </span>
                     </div>
                     <span class="room_creator"> Room Created by: {{ creator_username }}</span>
+                
                     <div class="gametime">
-                        <label for="game-time">Select Game Time:</label>
-                        <select id="game-time" name="game-time">
-                        <option value="30">30 seconds</option>
-                        <option value="60">1 minute</option>
-                        <option value="120">2 minutes</option>
-                        <option value="180">3 minutes</option>
-                        <option value="300">5 minutes</option>
-                        <option value="420">7 minutes</option>
-                        <option value="600">10 minutes</option>
-                        </select>
+                        <div class="select-container">
+                            <select id="game-time" name="game-time">
+                                <option value="" disabled selected>Select Game Time</option>
+                                <option value="30">30 seconds</option>
+                                <option value="60">1 minute</option>
+                                <option value="120">2 minutes</option>
+                                <option value="180">3 minutes</option>
+                                <option value="300">5 minutes</option>
+                                <option value="420">7 minutes</option>
+                                <option value="600">10 minutes</option>
+                            </select>
+
+                            <div class="select-model">
+                                <select id="select-model" name="Select Model">
+                                    <option value="" disabled selected>Select Learning Material</option>
+                                    <option value="alphabet">Alphabet</option>
+                                    <option value="number">Numbers</option>
+                                    <option value="words">Words</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
+
+                  
+                    
+                    
                     <hr>
                     <p class="douwant"> Do you want to participate in the game? </p>
                     <div class="radio_container">
@@ -286,6 +302,7 @@
     </script>
     
     <!-- Load the unified module first -->
+    <script src="{{ url_for('static', filename='js/clientSideClassifier.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/signLanguageDetector.js') }}" defer></script>
     <!-- Load room.js AFTER setting window.isRoomCreator and loading unified module -->
     <script src="{{ url_for('static', filename='js/room.js') }}" defer></script>

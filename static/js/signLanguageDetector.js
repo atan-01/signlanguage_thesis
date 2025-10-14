@@ -30,7 +30,19 @@ class SignLanguageDetector {
         // MediaPipe setup
         this.hands = null;
         this.isMediaPipeReady = false;
+
+        // Client-side processing options
+        this.useClientSideProcessing = config.useClientSideProcessing || false;
+        this.clientSideClassifier = null;
         
+        // Initialize client-side classifier if needed
+        if (this.useClientSideProcessing) {
+            // Initialize will be called async after construction
+            this.initClientSideClassifier().then(() => {
+                console.log('Client-side classifier ready');
+            });
+        }
+
         // Game-specific variables
         if (this.config.enableGameLogic) {
             this.holdCounter = 0;
@@ -38,12 +50,26 @@ class SignLanguageDetector {
             this.customClassNames = {
                 '0': 'A', '1': 'B', '2': 'C', '3': 'D', '4': 'E', '5': 'F',
                 '6': 'G', '7': 'H', '8': 'I', '9': 'K', '10': 'L', '11': 'M',
-                '12': 'N', '13': 'O', '14': 'P', '15': 'Q', '16': 'R', '17': 'T',
-                '18': 'U', '19': 'V', '20': 'W', '21': 'X', '22': 'Y', '23': 'ILY'
+                '12': 'N', '13': 'O', '14': 'P', '15': 'Q', '16': 'R', '17': 'S',
+                '18': 'T', '19': 'U', '20': 'V', '21': 'W', '22': 'X', '23': 'Y'
             };
             this.asl_classes = Object.values(this.customClassNames);
-            this.targetletter = this.asl_classes[Math.floor(Math.random() * this.asl_classes.length)];
-            this.updateGameUI();
+            
+            // Game mode variables
+            this.gameMode = config.gameMode || 'time_starts';
+            this.words = null;
+            this.currentWord = null;
+            this.currentBlankIndex = -1;
+            this.currentTargetLetter = null;
+            this.wordDisplay = '';
+            
+            // Initialize based on game mode
+            if (this.gameMode === 'time_starts') {
+                this.targetletter = this.asl_classes[Math.floor(Math.random() * this.asl_classes.length)];
+                this.updateGameUI();
+            } else if (this.gameMode === 'fill_blanks') {
+                this.loadWords();
+            }
         }
         
         // Learning mode variables
@@ -67,6 +93,7 @@ class SignLanguageDetector {
                 this.ownsSocket = true;
             }
         }
+
 
         // Initialize MediaPipe and setup
         this.initMediaPipe();
@@ -113,7 +140,7 @@ class SignLanguageDetector {
 
             await this.hands.setOptions({
                 maxNumHands: 2,
-                modelComplexity: 0, // Changed from 1 to 0 (lighter model)
+                modelComplexity: 1,
                 minDetectionConfidence: 0.5, // Lowered from 0.7
                 minTrackingConfidence: 0.5
             });
@@ -307,6 +334,20 @@ class SignLanguageDetector {
         }
     }
 
+    async loadWords() {
+        try {
+            const response = await fetch('/static/models/words.json');
+            const data = await response.json();
+            this.words = data; // Store the whole object
+            console.log(`Loaded ${this.words.words.length} words for Fill in the Blanks`);
+            return true;
+        } catch (error) {
+            console.error('Failed to load words:', error);
+            this.words = { words: [] };
+            return false;
+        }
+    }
+
     startProcessing() {
         console.log('Starting processing...');
         
@@ -386,43 +427,6 @@ class SignLanguageDetector {
         }
     }
 
-    processMediaPipeResults(results) {
-        if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-            // Send "no hands" signal to server
-            this.sendLandmarksToServer(null);
-            return;
-        }
-
-        try {
-            // Extract landmarks and handedness
-            const handsData = [];
-            
-            for (let i = 0; i < results.multiHandLandmarks.length; i++) {
-                const landmarks = results.multiHandLandmarks[i];
-                const handedness = results.multiHandedness[i];
-                
-                handsData.push({
-                    label: handedness.label,
-                    landmarks: landmarks.map(lm => ({
-                        x: lm.x,
-                        y: lm.y, 
-                        z: lm.z
-                    })),
-                    confidence: handedness.score
-                });
-            }
-            
-            // Send lightweight landmark data to server
-            this.sendLandmarksToServer(handsData);
-            
-            // Draw landmarks for visual feedback
-            this.drawLandmarks(this.formatLandmarksForDisplay(results.multiHandLandmarks));
-            
-        } catch (error) {
-            console.error('Error processing MediaPipe results:', error);
-        }
-    }
-
     sendLandmarksToServer(handsData) {
         if (!this.socketio) {
             console.error('Socket not available');
@@ -488,21 +492,77 @@ class SignLanguageDetector {
         }
     }
 
-    handleGameLogic(prediction, confidencePercent) {
-        if (prediction === this.targetletter && confidencePercent >= 50) {
-            this.holdCounter += 1;
-        } else {
-            this.holdCounter = 0;
+    selectRandomWordWithBlank() {
+        // Check if words are loaded
+        if (!this.words || !this.words.words || this.words.words.length === 0) {
+            console.error('Words not loaded yet, trying to load...');
+            this.loadWords().then(() => {
+                if (this.words && this.words.words && this.words.words.length > 0) {
+                    this.selectRandomWordWithBlank(); // Retry after loading
+                }
+            });
+            return;
         }
+        
+        // Select random word
+        const randomIndex = Math.floor(Math.random() * this.words.words.length);
+        this.currentWord = this.words.words[randomIndex];
+        
+        // Select random position to blank
+        const wordLength = this.currentWord.word.length;
+        this.currentBlankIndex = Math.floor(Math.random() * (wordLength - 1)) + 1;
+        
+        // Get the target letter (uppercase)
+        this.currentTargetLetter = this.currentWord.word[this.currentBlankIndex].toUpperCase();
+        
+        // Create display with blank
+        const wordArray = this.currentWord.word.split('');
+        wordArray[this.currentBlankIndex] = '_';
+        this.wordDisplay = wordArray.join('');
+        
+        console.log(`Word: ${this.currentWord.word}, Blank: ${this.currentBlankIndex}, Target: ${this.currentTargetLetter}`);
+    }
 
-        if (this.holdCounter >= 4) {
-            this.score += 10;
-            this.holdCounter = 0;
-            this.targetletter = this.asl_classes[Math.floor(Math.random() * this.asl_classes.length)];
-            this.updateGameUI();
 
-            if (this.config.isRoomMode && this.socketio) {
-                this.socketio.emit('score_update', { score: this.score });
+    handleGameLogic(prediction, confidencePercent) {
+        if (this.gameMode === 'time_starts') {
+            // Original time-based game logic
+            if (prediction === this.targetletter && confidencePercent >= 30) {
+                this.holdCounter += 1;
+            } else {
+                this.holdCounter = 0;
+            }
+
+            if (this.holdCounter >= 4) {
+                this.score += 10;
+                this.holdCounter = 0;
+                this.targetletter = this.asl_classes[Math.floor(Math.random() * this.asl_classes.length)];
+                this.updateGameUI();
+
+                if (this.config.isRoomMode && this.socketio) {
+                    this.socketio.emit('score_update', { score: this.score });
+                }
+            }
+        } 
+        else if (this.gameMode === 'fill_blanks') {
+            // Fill in the blanks game logic
+            if (prediction === this.currentTargetLetter && confidencePercent >= 50) {
+                this.holdCounter += 1;
+            } else {
+                this.holdCounter = 0;
+            }
+
+            if (this.holdCounter >= 4) {
+                this.score += 10;
+                this.holdCounter = 0;
+                
+                // Select new word with blank
+                this.selectRandomWordWithBlank();
+                this.updateGameUI();
+
+                if (this.config.isRoomMode && this.socketio) {
+                    this.socketio.emit('score_update', { score: this.score });
+                }
             }
         }
     }
@@ -587,6 +647,28 @@ class SignLanguageDetector {
         console.log(`Learning success: ${this.learningTarget} performed correctly!`);
     }
 
+    startGame() {
+        this.score = 0;
+        this.holdCounter = 0;
+        
+        if (this.gameMode === 'time_starts') {
+            this.targetletter = this.asl_classes[Math.floor(Math.random() * this.asl_classes.length)];
+        } 
+        else if (this.gameMode === 'fill_blanks') {
+            this.selectRandomWordWithBlank();
+        }
+        
+        this.updateGameUI();
+    }
+
+    generateNewTarget() {
+        // Generate new target without adding score or resetting hold counter
+        this.targetletter = this.asl_classes[Math.floor(Math.random() * this.asl_classes.length)];
+        this.holdCounter = 0; // Reset hold counter so they need to hold the new letter
+        this.updateGameUI();
+        console.log(`New target generated: ${this.targetletter}`);
+    }
+
     formatLandmarksForDisplay(multiHandLandmarks) {
         const formattedLandmarks = [];
         
@@ -653,13 +735,33 @@ class SignLanguageDetector {
     }
 
     updateGameUI() {
-        if (this.elements.scoreElement) {
-            this.elements.scoreElement.textContent = `Score ${this.score}`;
-        }
-        if (this.elements.targetElement) {
-            const isNumber = !isNaN(this.targetletter);
-            const label = isNumber ? "Number " : "Letter ";
-            this.elements.targetElement.textContent = `${label}${this.targetletter}`;
+        if (this.gameMode === 'time_starts') {
+            // Original UI update
+            if (this.elements.scoreElement) {
+                this.elements.scoreElement.textContent = `Score ${this.score}`;
+            }
+            if (this.elements.targetElement) {
+                const isNumber = !isNaN(this.targetletter);
+                const label = isNumber ? "Number " : "Letter ";
+                this.elements.targetElement.textContent = `${label}${this.targetletter}`;
+            }
+        } 
+        else if (this.gameMode === 'fill_blanks') {
+            // Fill in the blanks UI update
+            if (this.elements.scoreElement) {
+                this.elements.scoreElement.textContent = `Score ${this.score}`;
+            }
+            if (this.elements.targetElement) {
+                // Display: emoji + word with blank
+                this.elements.targetElement.innerHTML = `
+                    <div style="display: flex; justify-content: center; align-items: center;">
+                        <div style="font-size: 1.5rem; margin-bottom: 10px; margin-right: 1rem">${this.currentWord.emoji}</div>
+                        <div style="font-size: 1rem; letter-spacing: 0.5rem; font-weight: bold;">${this.wordDisplay.toUpperCase()}</div>
+                    </div>
+                `;
+                //<div style="font-size: 1.5rem; margin-top: 10px; opacity: 0.8;">Sign: ${this.currentTargetLetter}</div>
+
+            }
         }
     }
 
@@ -698,9 +800,30 @@ class SignLanguageDetector {
     resetScore() {
         if (this.config.enableGameLogic) {
             this.score = 0;
-            this.targetletter = this.asl_classes[Math.floor(Math.random() * this.asl_classes.length)];
+            this.holdCounter = 0;
+            
+            if (this.gameMode === 'time_starts') {
+                this.targetletter = this.asl_classes[Math.floor(Math.random() * this.asl_classes.length)];
+            } 
+            else if (this.gameMode === 'fill_blanks') {
+                this.selectRandomWordWithBlank();
+            }
+            
             this.updateGameUI();
         }
+    }
+
+    async setGameMode(mode) {
+        this.gameMode = mode;
+        
+        if (mode === 'fill_blanks') {
+            if (!this.words || !this.words.words) {
+                console.log('Loading words for Fill in the Blanks...');
+                await this.loadWords();
+            }
+        }
+        
+        console.log(`Game mode set to: ${mode}`);
     }
 
     setParticipation(participate) {
@@ -746,6 +869,132 @@ class SignLanguageDetector {
         this.stopCamera();
         if (this.socketio && this.ownsSocket) {
             this.socketio.disconnect();
+        }
+    }
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+    async initClientSideClassifier() {
+        try {
+            this.clientSideClassifier = new ClientSideASLClassifier();
+            
+            // Load default model (alphabet) immediately
+            const success = await this.clientSideClassifier.loadModel('alphabet');
+            
+            if (success) {
+                console.log('Client-side classifier initialized with alphabet model');
+            } else {
+                console.error('Failed to initialize client-side classifier');
+                this.useClientSideProcessing = false;
+            }
+        } catch (error) {
+            console.error('Failed to initialize client-side classifier:', error);
+            this.useClientSideProcessing = false;
+        }
+    }
+
+    async setModelType(modelType) {
+        /**
+         * Switch between 'alphabet' and 'number' models
+         * @param {string} modelType - Either 'alphabet' or 'number'
+         * @returns {Promise<boolean>} Success status
+         */
+        if (!this.clientSideClassifier) {
+            console.error('Client-side classifier not initialized');
+            return false;
+        }
+        
+        console.log(`Switching to ${modelType} model...`);
+        const success = await this.clientSideClassifier.loadModel(modelType);
+        
+        if (success) {
+            console.log(`Successfully switched to ${modelType} model`);
+            
+            // Update game classes if in game mode
+            if (this.config.enableGameLogic) {
+                if (modelType === 'alphabet') {
+                    this.customClassNames = {
+                        '0': 'A', '1': 'B', '2': 'C', '3': 'D', '4': 'E', '5': 'F',
+                        '6': 'G', '7': 'H', '8': 'I', '9': 'K', '10': 'L', '11': 'M',
+                        '12': 'N', '13': 'O', '14': 'P', '15': 'Q', '16': 'R', '17': 'S',
+                        '18': 'T', '19': 'U', '20': 'V', '21': 'W', '22': 'X', '23': 'Y'
+                    };
+                    this.asl_classes = Object.values(this.customClassNames);
+                } else if (modelType === 'number') {
+                    this.asl_classes = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+                }
+            }
+            
+            return true;
+        }
+        
+        console.error(`Failed to switch to ${modelType} model`);
+        return false;
+    }
+
+    getModelType() {
+        /**
+         * Get the currently loaded model type
+         * @returns {string|null} Current model type ('alphabet', 'number', or null)
+         */
+        if (this.clientSideClassifier) {
+            return this.clientSideClassifier.getCurrentModelType();
+        }
+        return null;
+    }
+
+    isClientSideProcessing() {
+        /**
+         * Check if client-side processing is enabled and ready
+         * @returns {boolean}
+         */
+        return this.useClientSideProcessing && 
+            this.clientSideClassifier && 
+            this.clientSideClassifier.isModelLoaded;
+    }
+
+
+    
+    processMediaPipeResults(results) {
+        if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+            // No hands detected
+            this.handlePredictionResult({ prediction: 'No gesture', confidence: 0 });
+            return;
+        }
+
+        try {
+            // Extract landmarks and handedness
+            const handsData = [];
+            
+            for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+                const landmarks = results.multiHandLandmarks[i];
+                const handedness = results.multiHandedness[i];
+                
+                handsData.push({
+                    label: handedness.label,
+                    landmarks: landmarks.map(lm => ({
+                        x: lm.x,
+                        y: lm.y, 
+                        z: lm.z
+                    })),
+                    confidence: handedness.score
+                });
+            }
+            
+            // Process based on configuration
+            if (this.useClientSideProcessing && this.clientSideClassifier) {
+                const result = this.clientSideClassifier.predict(handsData);
+                this.handlePredictionResult(result);
+            } else {
+                // Server-side processing (original method)
+                this.sendLandmarksToServer(handsData);
+            }
+            
+            // Draw landmarks for visual feedback
+            this.drawLandmarks(this.formatLandmarksForDisplay(results.multiHandLandmarks));
+            
+        } catch (error) {
+            console.error('Error processing MediaPipe results:', error);
         }
     }
 }

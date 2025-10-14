@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/room_details.css') }}">
+    <script src="{{ url_for('static', filename='js/room_details.js') }}" defer></script>
+    <title>Game History</title>
+</head>
+<body>
+    <header>
+        <div class="logo">FluentHands</div>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/main/">Practice</a>
+            <a href="/learn/">Learn</a>
+            <div class="profile_container" id="profileBtn">
+                <img src="{{ url_for('static', filename=user.profile_picture) }}" alt="pfp" class="pfp">
+                {{ user.username }}
+                <div class="dropdown" id="profileMenu">
+                    <button onclick="profile('{{ user.username }}')">Profile</button>
+                    <button id="logoutBtn" data-href="{{ url_for('auth.logout') }}"> Logout </button>
+                </div>
+            </div>  
+        </nav>
+    </header>
+    
+    <div class="room-details-container">
+        <div class="room-header">
+            <h2>Room: {{ room.room_code }}</h2>
+            <div class="type_material">
+                <h3>Game Type: {{ room.game_type }}</h3>
+                    |
+                <h3>Learning Material: {{ room.learning_material }}</h3>
+            </div>
+            
+            <p>Created by: {{ creator_username }}</p>
+        </div>
+
+        <div class="participants-section">
+            <h3>Participants</h3>
+            <ul class="participants-list">
+                {% for p in participants %}
+                    <li class="participant-item">
+                        <a href="{{ url_for('profile.profile', username=p.username) }}">
+                            <span class="participant-name">{{ p.username }}</span>
+                        </a>
+                        <span class="participant-score">Score: {{ p.score }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+</body>
+</html>

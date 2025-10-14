@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>User Profile</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Gantari:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
     <script src="{{ url_for('static', filename='js/profile.js') }}" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 </head>
 <body>
     <header>
@@ -18,17 +19,81 @@
             <a href="/main/">Practice</a>
             <a href="/learn/">Learn</a>
             <div class="profile_container" id="profileBtn">
-                <img src="{{ url_for('static', filename=user.profile_picture) }}" alt="pfp" class="pfp">
-                {{ user.username }}
+                <img src="{{ url_for('static', filename=logged_in_user.profile_picture) }}" alt="pfp" class="pfp">
+                {{ logged_in_user.username }}
                 <div class="dropdown" id="profileMenu">
-                    <button onclick="profile('{{ user.username }}')">Profile</button>
+                    <button onclick="profile('{{ logged_in_user.username }}')">Profile</button>
                     <button id="logoutBtn" data-href="{{ url_for('auth.logout') }}"> Logout </button>
                 </div>
             </div>
-                
         </nav>
     </header>
 
+    <div class="container">
+        <div class="profile_header">
+            <img src="{{ url_for('static', filename=user.profile_picture) }}" alt="pfp" class="profile_pfp">
+            <div class="profile_details">
+                <span>{{ user.username }}</span>
+                <div class="grade_joined">
+                    {{ ("Grade: " ~ user.grade) if user.grade else "Teacher" }} • Joined: {{ user.created_at }}
+                </div>
+            </div>
+            <div class="search">
+                <div class="searchcontainer">
+                    <input type="search" id="searchInput" placeholder="🔍 Search username..." class="searchbar">
+                    <button class="btn-search" id="searchBtn">Search</button>
+                </div>
+            </div>
 
+        </div>
+        <div class="profile-stats">
+            <div class="stat">
+                <div class="h3" id="avgScore">{{ avg_score }}</div>
+                <p>Average Score</p>
+            </div>
+            <div class="stat">
+                <div class="h3" id="bestScore">{{ best_score }}</div>
+                <p>Best Score</p>
+            </div>
+            <div class="stat">
+                <div class="h3" id="roomsJoined">{{ games_played }}</div>
+                <p>Games Played</p>
+            </div>
+        </div>
+        <div class="recent-games">
+            <div class="header_and_dropdownlist">
+                <h3>Recent Games</h3>
+                <div class="dropdown-container">
+                    <button class="dropdown-btn">Game Mode ▼</button>
+                    <div class="dropdown-list">
+                        <a href="#">Timer Starts</a>
+                        <a href="#">Falling Letters</a>
+                        <a href="#">Fill in the Blanks</a>
+                    </div>
+                </div>
+            </div>
+            <div class="history_container">
+                <ul id="gamesList">
+                    {% for game in user_game_sessions %}
+                        <li data-game-type="{{ game.room.game_type }}" data-is-creator="{{ game.is_creator | lower }}">
+                            <a href="{{ url_for('profile.room_details', room_id=game.room_id) }}">
+                                <span>Room: {{ game.room.room_code }}</span>
+                            </a>
+                            {% if game.is_creator %}
+                                <span class="creator-badge">Room Creator • {{ game.created_at }}</span>
+                            {% else %}
+                                <span>Score: {{ game.score }} • {{ game.created_at }}</span>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <button class="vso" onclick="changehistory()"> View Score Overtime </button>
+    </div>
+
+<script id="gameSessionsData" type="application/json">
+    {{ user_game_sessions | tojson }}
+</script>
 </body>
 </html>

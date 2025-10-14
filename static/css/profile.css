@@ -2,6 +2,9 @@ body {
     margin: 0;
     padding: 0;
     font-family: "Gantari", sans-serif;
+    overflow: hidden;
+    background-image: url('../images/bg_alphabet.png');
+    min-height: 100vh;
 }
 
 header {
@@ -52,7 +55,6 @@ nav a:hover {
     display: flex;
     align-items: center;
     gap: 0.8rem;
-    font-weight: 500;
     color: white;
     border: 2px solid transparent;
     border-radius: 3rem;
@@ -95,4 +97,294 @@ nav a:hover {
     aspect-ratio: 1 / 1;
     border-radius: 50%;
     object-fit: cover;
+}
+
+.container {
+    height: 75vh;
+    width: 60vw;
+    background-color: #ffffff;
+    margin: 2.5rem auto;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+    justify-self: center;
+
+    display: flex;
+    flex-direction: column;   /* vertical stacking */
+    overflow: hidden;
+}
+
+.profile_header {
+    width: 100%;
+    height: 20%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: flex;
+    align-items: center;
+}
+
+.profile_pfp {
+    border-radius: 10vh;
+    aspect-ratio: 1 / 1;
+    height: 70%;
+    margin-left: 2.5rem;
+    margin-right: 2rem;
+}
+
+.profile_details {
+    color: white;
+}
+
+.profile_details span{
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 3rem;
+}
+
+.grade_joined {
+    font-size: 0.9rem;
+}
+.profile-stats {
+    display: flex;
+    justify-content: space-around;
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;     
+    align-items: center;
+}
+
+.stat .h3 {
+    margin: 0;
+    font-size: 20px;
+    color: #667eea;
+    margin-top: 0.7rem;
+}
+
+.stat p {
+    margin-top: 2px;
+}
+
+.recent-games{
+    padding-left: 3rem;
+    flex: 1;
+    background-color: white;
+    width: 90%;
+    justify-self: center;
+}
+
+.recent-games h3 {
+    margin-bottom: 10px;
+    color: #444;
+    font-size: 1.5rem;
+}
+
+.recent-games ul {
+    flex: 1;
+    list-style: none;
+    padding: 0;
+    overflow-y: auto;
+    max-height: 31vh;
+    overflow-x: hidden;
+}
+
+.recent-games li {
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    background: #f9f9f9;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.vso {
+    display: block;
+    margin-left: auto;
+    margin-right: 3rem;
+    margin-bottom: 1rem;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    height: 2.5rem;
+    width: 10rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 2vh;
+}
+
+.header_and_dropdownlist {
+    display: flex;
+}
+
+.dropdown-container {
+    position: relative;
+    display: inline-block;
+    margin-left: auto;
+    margin-top: 2.5vh;
+}
+
+.dropdown-btn {
+    background: white; /* plain white */
+    color: #333;
+    padding: 0.6rem 1.2rem;
+    border: 1px solid #ddd;
+    border-radius: 0.5rem;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1); /* subtle shadow */
+}
+
+.dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    display: none; /* hidden by default */
+    flex-direction: column;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 0.5rem;
+    min-width: 180px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* dropdown shadow */
+    overflow: hidden;
+    z-index: 100;
+}
+
+.dropdown-list a {
+    padding: 0.8rem 1rem;
+    text-decoration: none;
+    color: #333;
+    transition: background 0.2s;
+}
+
+.dropdown-list a:hover {
+    background: #f2f2f2;
+}
+
+.creator-badge {
+    color: #667eea;
+    font-weight: 500;
+}
+
+/* Chart styles */
+.chart-container {
+    height: 25vh;
+    margin-top: 1rem;
+    display: none; /* Hidden by default */
+}
+
+.dropdown-btn-chart {
+    background: white;
+    color: #333;
+    padding: 0.6rem 1.2rem;
+    border: 0.1rem solid #ddd;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 0.2rem 0.6rem rgba(0,0,0,0.1);
+}
+
+.dropdown-btn-chart:hover {
+    background: #f2f2f2;
+}
+
+.dropdown-list-chart {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    display: none;
+    flex-direction: column;
+    background: white;
+    border: 0.1rem solid #ddd;
+    border-radius: 0.5rem;
+    min-width: 11rem;
+    box-shadow: 0 0.4rem 1rem rgba(0,0,0,0.1);
+    overflow: hidden;
+    z-index: 100;
+}
+
+.dropdown-list-chart a {
+    padding: 0.8rem 1rem;
+    text-decoration: none;
+    color: #333;
+    transition: background 0.2s;
+}
+
+.dropdown-list-chart a:hover {
+    background: #f2f2f2;
+}
+
+#scoreChart {
+    max-width: 100%;
+    height: 100% !important;
+}
+
+.search {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  width: 40%;
+  margin-top: 1rem;
+  margin-left: auto;
+}
+
+.searchcontainer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  padding: 10px 10px;
+  border-radius: 50px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 500px;
+  transition: all 0.3s ease;
+}
+
+.searchbar {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 10px 18px;
+  border-radius: 50px;
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.8);
+  transition: all 0.3s ease;
+}
+
+.searchbar:focus {
+  background: white;
+  box-shadow: 0 0 8px rgba(102, 126, 234, 0.4);
+}
+
+.btn-search {
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  border: none;
+  color: white;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+}
+
+.btn-search:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-search:active {
+  transform: scale(0.95);
+}
+
+.error-message {
+  color: red;
+  font-size: 0.9rem;
+  text-align: center;
+  width: 100%;
+  max-width: 500px;
+  word-wrap: break-word;
 }
