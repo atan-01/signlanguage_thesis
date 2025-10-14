@@ -13,6 +13,12 @@ let isGameEnding = false;
 let skipsRemaining = 2;
 let selectedLearningMaterial = 'alphabet'; // learning material as in model na gagamitin
 
+// movement
+let motionClassifier = null;
+let motionBuffer = [];
+let isCapturingMotion = false;
+let motionFrameInterval = null;
+
 const gamemodeimages = [
     '/static/images/gm_timestarts.png',
     '/static/images/gm_fillintheblanks.png', 
