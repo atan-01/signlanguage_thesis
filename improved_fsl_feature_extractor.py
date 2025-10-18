@@ -1,4 +1,3 @@
-# improved_fsl_feature_extractor.py - Enhanced feature extraction for better gesture discrimination
 import json
 import numpy as np
 from typing import Dict, List, Tuple, Optional
@@ -9,11 +8,6 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 import pickle
 
 class ImprovedFSLFeatureExtractor:
-    """
-    Enhanced FSL feature extraction system with better trajectory analysis
-    Specifically designed to distinguish between similar gestures like Circle vs Square
-    """
-    
     def __init__(self):
         self.feature_names = []
         self.scaler = StandardScaler()
@@ -27,7 +21,7 @@ class ImprovedFSLFeatureExtractor:
             'temporal_features': True,
             'geometric_features': True,
             'statistical_features': True,
-            'trajectory_features': True  # New enhanced trajectory analysis
+            'trajectory_features': True
         }
         
         self._initialize_feature_names()

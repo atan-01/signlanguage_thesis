@@ -14,12 +14,11 @@ document.addEventListener("DOMContentLoaded", function() {
             profileMenu.style.display === "flex" ? "none" : "flex";
     });
 
-    // Close menu if clicking outside
     document.addEventListener("click", function() {
         profileMenu.style.display = "none";
     });
 
-    // Handle dropdown item clicks
+    // dropdowm items
     list.addEventListener("click", (e) => {
         if (e.target.tagName === "A") {
             e.preventDefault();
@@ -61,12 +60,10 @@ document.addEventListener("DOMContentLoaded", function() {
         list.style.display = list.style.display === "flex" ? "none" : "flex";
     });
 
-    // Close dropdown when clicking outside
     document.addEventListener("click", () => {
         list.style.display = "none";
     });
 
-    // Create chart elements dynamically
     createChartElements();
 
 
@@ -87,7 +84,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         if (text.trim() === "User not found") {
             alert("⚠️ That user does not exist!");
-            searchInput.value = ""; // optional: clear input
+            searchInput.value = "";
             return;
         }
 
@@ -106,21 +103,20 @@ document.addEventListener("DOMContentLoaded", function() {
 function createChartElements() {
     const historyContainer = document.querySelector('.history_container');
     
-    // Create chart container with just the canvas
+    // chart container with just the canvas
     const chartContainer = document.createElement('div');
     chartContainer.className = 'chart-container';
     chartContainer.id = 'chartContainer';
     chartContainer.innerHTML = `<canvas id="scoreChart"></canvas>`;
     
-    // Add chart container after history container
     historyContainer.parentNode.insertBefore(chartContainer, historyContainer.nextSibling);
     
-    // Create chart dropdown in the existing dropdown container
+    // chart dropdown
     const existingDropdown = document.querySelector('.dropdown-container');
     const chartDropdown = document.createElement('div');
     chartDropdown.className = 'dropdown-container';
     chartDropdown.id = 'chartDropdownContainer';
-    chartDropdown.style.display = 'none'; // Hidden initially
+    chartDropdown.style.display = 'none';
     chartDropdown.innerHTML = `
         <button class="dropdown-btn" id="chartDropdownBtn">Game Mode ▼</button>
         <div class="dropdown-list" id="chartDropdownList">
@@ -131,10 +127,8 @@ function createChartElements() {
         </div>
     `;
     
-    // Add chart dropdown after existing dropdown
     existingDropdown.parentNode.insertBefore(chartDropdown, existingDropdown.nextSibling);
     
-    // Add chart dropdown functionality
     setupChartDropdown();
 }
 
@@ -197,7 +191,6 @@ function changehistory() {
         chartDropdown.style.display = "inline-block";
         isShowingGraph = true;
         
-        // Initialize chart
         initializeChart();
     } else {
         // Show list, hide chart
@@ -235,7 +228,7 @@ function createChart(ctx, filter) {
             game.room && game.room.game_type === filter && !game.is_creator
         );
     } else {
-        // Filter out creator entries for chart (they have no scores)
+        // filter creator entries for chart (no scores)
         filteredData = gameSessionsData.filter(game => !game.is_creator);
     }
     

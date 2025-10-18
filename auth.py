@@ -2,10 +2,8 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
-# Create blueprint
 auth_bp = Blueprint('auth', __name__)
 
-# Database helper functions
 def create_user(username, password, role, profile_picture, grade):
     """Create a new user in Supabase"""
     supabase = current_app.config['SUPABASE']

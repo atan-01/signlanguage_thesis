@@ -26,7 +26,7 @@ function switchTab(tab) {
     const registerForm = document.getElementById('registerForm');
     const tabs = document.querySelectorAll('.tab-btn');
 
-    tabs.forEach(t => t.classList.remove('active')); // remove active to both buttons
+    tabs.forEach(t => t.classList.remove('active'));
 
     if (tab === 'login') {
         loginForm.classList.add('active');
@@ -77,7 +77,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
 
     const formData = new FormData(this);
     const data = {
-        username: formData.get('username'), // username = name
+        username: formData.get('username'),
         password: formData.get('password')
     };
 
@@ -157,7 +157,7 @@ document.getElementById('registerForm').addEventListener('submit', async functio
     }
 });
 
-// Avatar selection state
+// avatar selection state
 let selectedAvatarTemp = null;
 
 function openAvatarModal() {
@@ -165,9 +165,8 @@ function openAvatarModal() {
     modal.style.display = "flex";
 
     const avatarGrid = document.getElementById("avatarGrid");
-    avatarGrid.innerHTML = ""; // clear previous
+    avatarGrid.innerHTML = "";
 
-    // Predefined images
     const avatars = ["darwin.png", "kirby.png", "roblox_guy.png", "roblox_girl.png", "default.jpg"];
 
     avatars.forEach(img => {

@@ -43,7 +43,7 @@ def get_participants_with_profiles(participants):
 @room_bp.route(('/<room_code>'), methods=["POST", "GET"])
 def room(room_code):
     """Main translator page - requires login"""
-    from home import rooms, game_states  # Import rooms here to avoid circular imports
+    from home import rooms, game_states
     
     user_id = session.get('user_id')
     if not user_id:
@@ -70,10 +70,8 @@ def room(room_code):
     room_data = rooms[room_code]
     creator_username = room_data.get("creator", "Unknown")
     
-    # Get participants with profile pictures
     participants_with_profiles = get_participants_with_profiles(participants)
     
-    # Get creator profile data (creator might not be in participants list)
     creator_data = get_user_by_username(creator_username)
     
     return render_template('room.html', 

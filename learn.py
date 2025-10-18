@@ -47,7 +47,7 @@ def learn_category(category):
             .order("class") \
             .execute()
         items = [{"class": row["class"], "instruction": row["instruction"], "image_path": row["image_path"]} for row in response.data]
-        print(f"Fetched items for {category}: {items}")  # Debugging
+        print(f"Fetched items for {category}: {items}")
     except Exception as e:
         print(f"Error fetching learning materials: {e}")
         items = []

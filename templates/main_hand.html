@@ -10,12 +10,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-    
-    <!-- 🔥 Load client-side classifier FIRST -->
+    <!-- in order-->
     <script src="{{ url_for('static', filename='js/clientSideClassifier.js') }}" defer></script>
-    <!-- Then load the detector -->
     <script src="{{ url_for('static', filename='js/signLanguageDetector.js') }}" defer></script>
-    <!-- Finally load main.js -->
     <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
 </head>
 <body>

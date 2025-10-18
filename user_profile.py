@@ -36,7 +36,7 @@ def get_user_by_username(username):
 def profile(username):
     supabase = current_app.config['SUPABASE']
     
-    # Check if user is logged in (for authentication)
+    # Check if user is logged in
     session_user_id = session.get('user_id')
     if not session_user_id:
         return redirect(url_for('auth.index'))

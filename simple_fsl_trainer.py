@@ -1,4 +1,3 @@
-# simple_fsl_trainer.py - Simple Random Forest trainer for FSL motion recognition
 import numpy as np
 import json
 import os
@@ -339,7 +338,3 @@ if __name__ == "__main__":
         print(f"Training failed: {e}")
         import traceback
         traceback.print_exc()
-
-
-# paste in terminal to run:
-# python fsl_model_trainer.py --features-dir fsl_features_improved --output-dir fsl_models_improved

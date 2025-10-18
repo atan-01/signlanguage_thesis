@@ -1,4 +1,3 @@
-// Streamlined room.js - client-side processing only
 let detector;
 let allCamerasReady = false;
 let gameTypeSelected = false;
@@ -47,11 +46,11 @@ window.addEventListener('DOMContentLoaded', () => {
     detector = new SignLanguageDetector({
         isRoomMode: true,
         enableGameLogic: true,
-        useClientSideProcessing: true, // 🔥 This is the key change!
+        useClientSideProcessing: true,
         enableFpsCounter: false,
-        processingInterval: 300, // Can keep this lower since no server overload
+        processingInterval: 300,
         participate: participate,
-        gameMode: 'time_starts', // Default mode, will be updated when game type is set
+        gameMode: 'time_starts',
         onCameraStart: function() {
             console.log('Camera started in room mode');
         },
@@ -66,13 +65,11 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Socket is now ONLY for game synchronization - no heavy processing!
     socketio = detector.socketio;
     socketio.emit('join_room', { room: ROOM_CODE, name: USERNAME });
 
     updateSkipButton();
 
-    // Setup minimal room sync handlers (no landmark processing)
     setupRoomSocketHandlers();
 });
 
@@ -116,24 +113,21 @@ function setupRoomSocketHandlers() {
         gameduration = data.duration;
         document.getElementById('game-type-display').style.fontSize = "2rem";
         
-        // 🔥 FIX 1: Set learning material BEFORE loading model
         if (data.learning_material) {
             selectedLearningMaterial = data.learning_material;
-            console.log(`🎮 Game will use ${selectedLearningMaterial} model`);
+            console.log(`Game will use ${selectedLearningMaterial} model`);
         }
         
-        // 🔥 FIX 2: Load the correct model for ALL participants
         if (detector && detector.clientSideClassifier) {
-            console.log(`📥 Loading ${selectedLearningMaterial} model for participant...`);
+            console.log(`Loading ${selectedLearningMaterial} model for participant...`);
             const success = await detector.setModelType(selectedLearningMaterial);
             
             if (success) {
-                console.log(`✅ Participant loaded ${selectedLearningMaterial} model successfully`);
+                console.log(`Participant loaded ${selectedLearningMaterial} model successfully`);
                 
-                // 🔥 FIX 3: Update detector's class names based on material type
                 if (selectedLearningMaterial === 'number') {
                     detector.asl_classes = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
-                    console.log('🔢 Participant using numbers as target classes');
+                    console.log('Participant using numbers as target classes');
                 } else if (selectedLearningMaterial === 'alphabet') {
                     detector.customClassNames = {
                         '0': 'A', '1': 'B', '2': 'C', '3': 'D', '4': 'E', '5': 'F',
@@ -142,18 +136,17 @@ function setupRoomSocketHandlers() {
                         '18': 'T', '19': 'U', '20': 'V', '21': 'W', '22': 'X', '23': 'Y'
                     };
                     detector.asl_classes = Object.values(detector.customClassNames);
-                    console.log('🔤 Participant using alphabet as target classes');
+                    console.log('Participant using alphabet as target classes');
                 }
                 
-                // 🔥 FIX 4: Generate initial target AFTER model is loaded
                 if (detector.config.enableGameLogic && detector.gameMode === 'time_starts') {
                     detector.targetletter = detector.asl_classes[Math.floor(Math.random() * detector.asl_classes.length)];
                     detector.updateGameUI();
-                    console.log(`🎯 Initial target set to: ${detector.targetletter}`);
+                    console.log(`Initial target set to: ${detector.targetletter}`);
                 }
                 
             } else {
-                console.error(`❌ Participant failed to load ${selectedLearningMaterial} model`);
+                console.error(`Participant failed to load ${selectedLearningMaterial} model`);
                 alert(`Warning: Could not load ${selectedLearningMaterial} model`);
             }
         }
@@ -191,9 +184,7 @@ function setupRoomSocketHandlers() {
         }, 1000);
     });
 
-    // Game start signal - all processing is now client-side
     socketio.on('start_game_signal', function () {
-        console.log('Game started signal received');
         const stopBtn = document.getElementById('stopBtn');
         
         isGameEnding = false;
@@ -208,10 +199,10 @@ function setupRoomSocketHandlers() {
 
         if (stopBtn) stopBtn.disabled = true;
         
-        // Reset game state - all processing happens locally now
+        // Reset game state
         detector.resetScore();
         detector.startGame();
-        detector.startProcessing(); // Client-side processing only
+        detector.startProcessing();
 
         let timeLeft = selectedGameTime;
         timer_div.textContent = `${timeLeft}s`;
@@ -220,12 +211,11 @@ function setupRoomSocketHandlers() {
             waiting_to_start.style.backgroundColor = '#4CAF50';
         }
 
-        // Clear any existing timer
         if (gameTimerInterval) {
             clearInterval(gameTimerInterval);
         }
 
-        // Single timer implementation
+        // timer
         gameTimerInterval = setInterval(() => {
             timeLeft--;
             timer_div.textContent = `${timeLeft}s`;
@@ -234,7 +224,6 @@ function setupRoomSocketHandlers() {
                 clearInterval(gameTimerInterval);
                 gameTimerInterval = null;
                 
-                // Prevent multiple end-game triggers
                 if (isGameEnding) return;
                 isGameEnding = true;
                 
@@ -243,7 +232,7 @@ function setupRoomSocketHandlers() {
         }, 1000);
     }); 
 
-    // Leaderboard updates (only sync scores, not frames)
+    // Leaderboard updates
     socketio.on('leaderboard_update', function(data) {
         const list = document.getElementById('leaderboard-list');
         const existingRows = list.getElementsByClassName('leaderboard-row');
@@ -299,7 +288,6 @@ function setupRoomSocketHandlers() {
     });
 }
 
-// New function to handle game ending cleanup
 function endGameCleanup() {
     detector.stopProcessing();
     
@@ -309,7 +297,6 @@ function endGameCleanup() {
     skipsRemaining = 2;
     updateSkipButton();
 
-    // Show alert only once
     alert("Time's up!");
     
     if (participate) {
@@ -340,7 +327,6 @@ function endGameCleanup() {
     socketio.emit('end_game', { final_score: finalScore });
 }
 
-// Get DOM elements
 const messages = document.getElementById("messages");
 const startGameButton = document.getElementById('startgameBtn');
 const gamemodediv = document.querySelector('.gamemode');
@@ -376,20 +362,16 @@ btn_prev.addEventListener('click', function(e) {
 });
 
 function handleConfirmButton() {
-    console.log('🔍 CONFIRM BUTTON CLICKED - Validating settings...');
-    
-    // VALIDATION 1: Check if learning material is selected
+    // check if learning material is selected
     if (!selectedLearningMaterial || selectedLearningMaterial === '' || selectModelDropdown.value === '') {
-        alert('❌ ERROR: Please select a learning material (Alphabet or Numbers)');
-        console.error('❌ Validation failed: No learning material selected');
+        alert('ERROR: Please select a learning material (Alphabet or Numbers)');
         return false;
     }
     
-    // VALIDATION 2: Check if game time is selected
+    // check if game time is selected
     const gameTimeValue = gameTimeSelect.value;
     if (!gameTimeValue || gameTimeValue === '') {
-        alert('❌ ERROR: Please select a game time');
-        console.error('❌ Validation failed: No game time selected');
+        alert('ERROR: Please select a game time');
         return false;
     }
     selectedGameTime = parseInt(gameTimeValue);
@@ -397,24 +379,20 @@ function handleConfirmButton() {
     const participateRadio = document.getElementById('flexRadioDefault1');
     const notParticipateRadio = document.getElementById('flexRadioDefault2');
     
-    // VALIDATION 3: Check if participation is selected
+    // check if participation is selected
     if (!participateRadio.checked && !notParticipateRadio.checked) {
-        alert('❌ ERROR: Please select whether you want to participate or not');
-        console.error('❌ Validation failed: Participation not selected');
+        alert('ERROR: Please select whether you want to participate or not');
         return false;
     }
     
-    // VALIDATION 4: Check learning material & game mode compatibility
+    // check learning material & game mode compatibility
     const selectedGameType = modenamediv.textContent;
     const isTimerStarts = selectedGameType === 'Timer Starts' || gamemodeindex === 0;
     
     if ((selectedLearningMaterial === 'number') && !isTimerStarts) {
-        alert(`❌ ERROR: ${selectedLearningMaterial.charAt(0).toUpperCase() + selectedLearningMaterial.slice(1)} only supports "Timer Starts" game mode!\n\nPlease select "Timer Starts" before confirming.`);
-        console.error(`❌ Validation failed: Invalid combination - ${selectedLearningMaterial} with ${selectedGameType}`);
+        alert(` ERROR: ${selectedLearningMaterial.charAt(0).toUpperCase() + selectedLearningMaterial.slice(1)} only supports "Timer Starts" game mode!\n\nPlease select "Timer Starts" before confirming.`);
         return false;
     }
-    
-    console.log('✅ All validations passed! Proceeding with game setup...');
     
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
@@ -427,7 +405,7 @@ function handleConfirmButton() {
         if (stopBtn) stopBtn.disabled = false;
         socketio.emit('camera_stopped');
         updateSkipButton();
-        console.log('✅ User chose to participate');
+        console.log('User chose to participate');
     } else if (notParticipateRadio.checked) {
         participate = false;
         socketio.emit('creator_participation', { participates: false });
@@ -451,12 +429,11 @@ function handleConfirmButton() {
         }
  
         socketio.emit('camera_ready');
-        console.log('✅ User chose not to participate');
+        console.log('User chose not to participate');
     }
     
     let selectedType = modenamediv.textContent;
-    
-    // Emit game settings with learning material
+
     socketio.emit('set_game_type_and_time', { 
         type: selectedType,
         duration: selectedGameTime,
@@ -465,7 +442,7 @@ function handleConfirmButton() {
     });
     
     document.getElementById('creator-participate').style.display = 'none';
-    console.log('✅ Settings confirmed:', {
+    console.log('Settings confirmed:', {
         participate: participate,
         gameTime: selectedGameTime,
         gameType: selectedType,
@@ -491,7 +468,6 @@ btn_close.addEventListener('click', () => {
 if (btn_confirm) {
     btn_confirm.removeEventListener('click', handleConfirmButton); // Remove old listeners
     btn_confirm.addEventListener('click', handleConfirmButton); // Add new listener
-    console.log('✅ Confirm button listener attached');
 }
 function openGameModeOverlay() {
     if (window.isRoomCreator) {
@@ -530,8 +506,6 @@ function updateParticipantsList(participants) {
         listItem.appendChild(span);
         participantList.appendChild(listItem);
     });
-    
-    console.log('Updated participants list:', participants);
 }
 
 // Chat functions
@@ -555,7 +529,6 @@ function tryEnableStartGameButton() {
 }
 
 function startGame() {
-    console.log('Start game button clicked');
     socketio.emit('start_game');
     if (display_gamemode) {
         display_gamemode.style.pointerEvents = "none";
@@ -565,7 +538,6 @@ function startGame() {
 }
 
 function updateCameraStatusDisplay(data) {
-    console.log('Camera status update:', data);
     allCamerasReady = data.ready === data.total && data.total > 0;
 
     const statusdiv = document.getElementById('camera-status');
@@ -602,18 +574,13 @@ function skip() {
         skipsRemaining--;
         updateSkipButton();
         
-        // Generate new target letter without adding points
         if (detector && detector.generateNewTarget) {
             detector.generateNewTarget();
         }
-        
-        console.log(`Skipped! ${skipsRemaining} skips remaining`);
     }
 }
 
-function exitroom() {
-    console.log('Immediate exit initiated...');
-    
+function exitroom() {  
     if (window.isRoomCreator) {
         console.log('Room creator leaving - room will be deleted');
         socketio.emit('room_creator_leaving');
@@ -657,26 +624,23 @@ if (selectModelDropdown) {
         selectedLearningMaterial = event.target.value;
         console.log(`Learning material selected: ${selectedLearningMaterial}`);
         
-        // Handle game mode restrictions
         if (selectedLearningMaterial === 'number') {
             // Force Timer Starts gamemode
             gamemodeindex = 0;
             updategamemodeimage();
-            console.log(`⚠️ ${selectedLearningMaterial} only supports Timer Starts mode`);
         }
         
         // Pre-load the model when creator selects it
         if (detector && detector.clientSideClassifier) {
-            console.log(`Pre-loading ${selectedLearningMaterial} model...`);
             const success = await detector.setModelType(selectedLearningMaterial);
             
             if (success) {
-                console.log(`✅ ${selectedLearningMaterial} model pre-loaded successfully`);
+                console.log(`${selectedLearningMaterial} model pre-loaded successfully`);
                 showModelLoadedNotification(selectedLearningMaterial);
-                console.log("🎯 Emitting learning material:", selectedLearningMaterial);
+                console.log("Emitting learning material:", selectedLearningMaterial);
                 socketio.emit('set_learning_material', {learningMaterial: selectedLearningMaterial });
             } else {
-                console.error(`❌ Failed to pre-load ${selectedLearningMaterial} model`);
+                console.error(`Failed to pre-load ${selectedLearningMaterial} model`);
                 alert(`Failed to load ${selectedLearningMaterial} model. Please check that the model file exists at /static/models/${selectedLearningMaterial}/asl_randomforest.json`);
                 selectModelDropdown.value = ''; // Reset dropdown
                 selectedLearningMaterial = 'alphabet'; // Reset to default
@@ -688,37 +652,22 @@ if (selectModelDropdown) {
 }
 
 function showModelLoadedNotification(modelType) {
-    /**
-     * Show visual feedback when model is loaded
-     */
     const notification = document.createElement('div');
-    notification.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, #4CAF50, #45a049);
-        color: white;
-        padding: 12px 16px;
-        border-radius: 8px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        z-index: 5000;
-        font-size: 14px;
-        font-weight: bold;
-        animation: slideIn 0.3s ease-out;
-    `;
+    notification.className = 'model-notification';
     
     const modelDisplay = modelType.charAt(0).toUpperCase() + modelType.slice(1);
-    notification.textContent = `✅ ${modelDisplay} model loaded`;
+    notification.textContent = `${modelDisplay} model loaded`;
     
     document.body.appendChild(notification);
     
     setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease-in';
+        notification.classList.add('hide');
         setTimeout(() => {
             notification.remove();
         }, 300);
     }, 2000);
 }
+
 
 // Cleanup
 window.addEventListener('beforeunload', function() {
@@ -734,6 +683,3 @@ window.addEventListener('beforeunload', function() {
         detector.stopCamera();
     }
 });
-
-console.log('Room with client-side Sign Language Detection initialized');
-console.log('Final check - isRoomCreator:', window.isRoomCreator);

@@ -734,6 +734,50 @@ input[type="radio"] {
   margin: 1vh 0;
 }
 
+.model-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    z-index: 5000;
+    font-family: 'Gantari', sans-serif;
+    font-size: 14px;
+    font-weight: bold;
+    animation: slideIn 0.3s ease-out;
+}
+
+.model-notification.hide {
+    animation: slideOut 0.3s ease-in;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+}
+
+
+
 
 /* Profile picture styles for participants */
 .participant-item {

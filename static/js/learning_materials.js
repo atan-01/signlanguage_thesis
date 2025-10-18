@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.log('✅ Alphabet/Numbers mode initialized with client-side processing');
         
         await loadModelForCategory();
-        
+
         // verify client-side processing is active
         if (detector.isClientSideProcessing()) {
             console.log('✅ Client-side processing confirmed active');
@@ -99,21 +99,17 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.error('❌ Client-side processing NOT active - check initialization');
         }
     }
-    
     initializeItems();
 });
 
 function initializeFSLWordsSocket() {
-    /**
-     * Initialize Socket.IO for FSL words server-side processing
-     * NOTE: This is NOT multiplayer - just connecting user to server for ML processing
-     * Each user learns independently, server just processes their hand movements
-     */
+    /*Initialize Socket.IO for FSL words server-side processing*/
+
     socketio = io();
     
     socketio.on('connect', () => {
         console.log('✅ Connected to FSL processing server (independent learning)');
-        socketio.emit('join_fsl_learning'); // Just initializing connection, not joining others
+        socketio.emit('join_fsl_learning');
     });
     
     socketio.on('prediction_result', (data) => {
@@ -133,31 +129,24 @@ function initializeFSLWordsSocket() {
         console.log('Disconnected from FSL processing server');
     });
     
-    // Request list of words the model can recognize
     socketio.emit('get_supported_signs');
 }
 
     function handleFSLPrediction(data) {
-        /**
-         * Handle FSL words predictions from server
-         */
+        /*Handle FSL words predictions from server*/
+
         const predictionDiv = document.getElementById('prediction');
         const confidenceDiv = document.getElementById('confidence');
         const confidenceBar = document.getElementById('confidenceBar');
         
         if (!predictionDiv || !confidenceDiv || !confidenceBar) return;
         
-        // Update display
         predictionDiv.textContent = data.prediction || 'No gesture';
         
         const confidencePercent = Math.round((data.confidence || 0) * 100);
         confidenceDiv.textContent = confidencePercent + '%';
         confidenceBar.style.width = confidencePercent + '%';
-        
-        // 🔥 DEBUG: Log current target
-        console.log(`Target: "${currentclass}" | Prediction: "${data.prediction}" | Confidence: ${confidencePercent}%`);
-        
-        // 🔥 Add visual feedback for processing
+
         if (data.prediction && data.prediction.includes('Collecting')) {
             // Still collecting motion
             predictionDiv.style.color = '#FFA500';
@@ -173,25 +162,17 @@ function initializeFSLWordsSocket() {
             confidenceBar.style.background = '#e9ecef';
             
         } else {
-            // Actual prediction - check if it matches target
-            // 🔥 Case-insensitive comparison and partial match
             const targetLower = currentclass ? currentclass.toLowerCase() : '';
             const predictionLower = data.prediction ? data.prediction.toLowerCase() : '';
-            
-            // Check if prediction matches the first word of target (e.g., "apple" matches "Apple (Mansanas)")
             const isMatch = targetLower.includes(predictionLower) || predictionLower.includes(targetLower);
             const hasConfidence = confidencePercent >= 25;
             
-            console.log(`Target: "${currentclass}" | Prediction: "${data.prediction}" | Match: ${isMatch}`);
-            
             if (isMatch && hasConfidence) {
-                // Correct gesture!
+                // Correct gesture
                 predictionDiv.style.color = '#4CAF50';
                 predictionDiv.style.fontWeight = 'bold';
                 confidenceBar.style.background = 'linear-gradient(90deg, #4CAF50, #45a049)';
-                
-                console.log(`✅ CORRECT GESTURE! ${data.prediction} at ${confidencePercent}%`);
-                
+
                 // Show success immediately
                 if (!fslSuccessShown) {
                     console.log('🎉 Showing success notification...');
@@ -206,23 +187,14 @@ function initializeFSLWordsSocket() {
                 }
                 
             } else {
-                // Different prediction or low confidence
                 predictionDiv.style.color = '#007bff';
                 predictionDiv.style.fontWeight = 'normal';
                 confidenceBar.style.background = 'linear-gradient(90deg, #007bff, #0056b3)';
             }
         }        
-        // Log for debugging
-        if (data.buffer_size) {
-            console.log(`FSL: ${data.prediction} (${confidencePercent}%) | Buffer: ${data.buffer_size} frames`);
-        }
     }
 
 function showFSLSuccess() {
-    /**
-     * Show success notification for FSL words
-     * Same style as alphabet/numbers learning success
-     */
     const notification = document.createElement('div');
     notification.style.cssText = `
         position: fixed;
@@ -246,7 +218,6 @@ function showFSLSuccess() {
         <small>You performed "${currentclass}" correctly!</small>
     `;
     
-    // Add animation styles if not already present
     if (!document.getElementById('learningSuccessStyles')) {
         const style = document.createElement('style');
         style.id = 'learningSuccessStyles';
@@ -265,7 +236,6 @@ function showFSLSuccess() {
     
     document.body.appendChild(notification);
     
-    // Slide out and remove after 3 seconds
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease-in';
         setTimeout(() => {
@@ -279,28 +249,17 @@ function showFSLSuccess() {
 }
 
 function startFSLMotionCapture() {
-    /**
-     * Start capturing motion for FSL words processing
-     * Optimized frame rate to prevent server overload
-     */
     if (isCapturingMotion) return;
     
     isCapturingMotion = true;
     motionBuffer = [];
     
-    console.log('🎬 Started FSL motion capture (3 FPS - optimized)');
-    
-    // 🔥 CRITICAL: Capture at 300-500ms intervals to prevent server overload
-    // Server needs time to process MediaPipe + feature extraction + prediction
     processingInterval = setInterval(() => {
         captureFSLFrame();
-    }, 333); // ~3 FPS - balanced between responsiveness and performance
+    }, 333); // ~3 FPS
 }
 
 function stopFSLMotionCapture() {
-    /**
-     * Stop capturing motion
-     */
     if (processingInterval) {
         clearInterval(processingInterval);
         processingInterval = null;
@@ -309,24 +268,18 @@ function stopFSLMotionCapture() {
     isCapturingMotion = false;
     motionBuffer = [];
     
-    // Reset hold counter
     fslHoldCounter = 0;
     fslSuccessShown = false;
-    
-    console.log('🛑 Stopped FSL motion capture');
 }
 
 async function captureFSLFrame() {
-    /**
-     * Capture a single frame and send to server for FSL processing
-     */
+    // capture 1 frame
     if (!detector || !detector.elements.videoElement) return;
     
     const videoElement = detector.elements.videoElement;
     if (!videoElement.videoWidth || !videoElement.videoHeight) return;
     
     try {
-        // Create temporary canvas to capture frame
         const canvas = document.createElement('canvas');
         canvas.width = videoElement.videoWidth;
         canvas.height = videoElement.videoHeight;
@@ -334,27 +287,20 @@ async function captureFSLFrame() {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
         
-        // Convert to base64
         const imageData = canvas.toDataURL('image/jpeg', 0.8);
         
-        // Send to server via socket
         if (socketio && socketio.connected) {
             socketio.emit('process_fsl_frame', {
                 image: imageData,
                 timestamp: Date.now()
             });
         }
-        
     } catch (error) {
         console.error('Error capturing FSL frame:', error);
     }
 }
 
 async function loadModelForCategory() {
-    /**
-     * Load the appropriate model based on current category
-     * Only for alphabet/numbers (client-side processing)
-     */
     if (isWordsCategory) {
         console.log('Words category - using server-side processing');
         return;
@@ -374,24 +320,15 @@ async function loadModelForCategory() {
         modelType = 'alphabet';
     }
     
-    console.log(`Loading ${modelType} model for category: ${currentCategory}`);
-    
     const success = await detector.setModelType(modelType);
     
-    if (success) {
-        console.log(`✅ ${modelType} model loaded successfully`);
-    } else {
-        console.error(`❌ Failed to load ${modelType} model`);
+    if (!success) {
         alert(`Failed to load ${modelType} recognition model. Please refresh the page.`);
     }
 }
 
 function updateLearningProgress(data) {
-    /**
-     * Update learning progress for alphabet/numbers (client-side)
-     */
     if (currentclass && data.prediction === currentclass) {
-        // Visual feedback when user is performing correct gesture
         const predictionDiv = document.getElementById('prediction');
         if (predictionDiv) {
             predictionDiv.style.color = '#4CAF50';
@@ -407,24 +344,15 @@ function updateLearningProgress(data) {
 }
 
 async function tryityourself() {
-    console.log("Try it yourself button clicked");
     if (content_div) {
         content_div.style.display = 'flex';
         detector_header.textContent = '';
         
-        const categoryDisplay = currentCategory.charAt(0).toUpperCase() + 
-                               currentCategory.slice(1).toLowerCase();
+        const categoryDisplay = currentCategory.charAt(0).toUpperCase() + currentCategory.slice(1).toLowerCase();
         detector_header.textContent = `Try to perform: ${currentclass}`;
         class_div.style.display = 'none';
 
         if (isWordsCategory) {
-            // FSL Words - server-side processing
-            console.log('Starting FSL words detection');
-            
-            if (currentclass) {
-                console.log(`Target FSL word: ${currentclass}`);
-            }
-            
             await detector.startCamera();
             startFSLMotionCapture();
             
@@ -434,7 +362,6 @@ async function tryityourself() {
             
             if (currentclass) {
                 detector.setLearningTarget(currentclass);
-                console.log(`Learning target set to: ${currentclass}`);
             }
 
             await detector.startCamera();
@@ -524,9 +451,7 @@ function initializeItems() {
     console.log('Is words category:', isWordsCategory);
 }
 
-function matcontent(asl_clas, instruction, image_path, category) {
-    console.log("Material content button clicked");
-    
+function matcontent(asl_clas, instruction, image_path, category) { 
     currentIndex = currentItems.findIndex(item => 
         item.class === asl_clas && 
         item.instruction === instruction && 
@@ -544,9 +469,6 @@ function matcontent(asl_clas, instruction, image_path, category) {
         instruction_div.textContent = instruction;
         image_div.innerHTML = `<img src="/static/${image_path}" alt="${asl_clas}" class="hand_image">`;
     }
-    
-    console.log('Current index set to:', currentIndex);
-    console.log('Current class:', currentclass);
 }
 
 function next() {
@@ -627,5 +549,3 @@ window.addEventListener('beforeunload', () => {
         detector.stopCamera();
     }
 });
-
-console.log('Learning materials initialized with unified alphabet/numbers/words support');

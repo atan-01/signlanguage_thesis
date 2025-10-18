@@ -1,10 +1,6 @@
-# Updated socketio_events.py - Simplified for room/translator only
-# Learning materials no longer need server processing!
-
 from flask import session, current_app, request, jsonify
 from flask_socketio import emit, join_room, leave_room, send
 import numpy as np
-
 
 import time
 import cv2
@@ -67,7 +63,6 @@ def flatten_hand_with_features(hand):
     landmarks = hand['landmarks']
     coords = normalize_hand_landmarks(landmarks)
     
-    # Raw coordinates (flattened)
     raw_features = coords.flatten()
     
     # Engineered features
@@ -185,7 +180,6 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         if hasattr(handle_process_fsl_frame, 'user_buffers'):
             if user_id in handle_process_fsl_frame.user_buffers:
                 del handle_process_fsl_frame.user_buffers[user_id]
-                print(f"Cleaned up FSL motion buffer for user {user_id}")
 
         if not name:
             return
@@ -259,18 +253,18 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         model_loaded = detector.model_loaded if detector else False
         emit('status', {'message': 'Connected - Server processing', 'model_loaded': model_loaded}, to=request.sid)
 
-        # 🔥 Send game settings to new joiner (including learning material)
+        # Send game settings to new joiner (including learning material)
         game_type = rooms[room].get('game_type')
         duration = rooms[room].get('duration', 30)
         gamemode_index = rooms[room].get('gamemode_index')
-        learning_material = rooms[room].get('learning_material', 'alphabet')  # 🔥 Get stored material
+        learning_material = rooms[room].get('learning_material', 'alphabet')
 
         if game_type:
             emit('game_type_set', {
                 'type': game_type,
                 'duration': duration,
                 'gamemode_index': gamemode_index,
-                'learning_material': learning_material  # 🔥 Send to new joiner
+                'learning_material': learning_material
             }, to=request.sid)
 
     @socketio.on('message')
@@ -323,22 +317,21 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         game_type = data.get('type')
         gamemode_index = data.get('gamemode_index')
         duration = data.get('duration', 30)
-        learning_material = data.get('learning_material', 'alphabet')  # Get from data
+        learning_material = data.get('learning_material', 'alphabet')
         
         if room and room in rooms:
             rooms[room]['game_type'] = game_type
             rooms[room]['duration'] = duration
             rooms[room]['gamemode_index'] = gamemode_index
-            rooms[room]['learning_material'] = learning_material  # 🔥 Store it
+            rooms[room]['learning_material'] = learning_material
             
-            print(f"🎮 Room {room}: Game type set to {game_type}, Material: {learning_material}")
+            print(f"Room {room}: Game type set to {game_type}, Material: {learning_material}")
             
-            # 🔥 Broadcast to ALL participants including creator
             emit('game_type_set', {
                 'type': game_type, 
                 'duration': duration, 
                 'gamemode_index': gamemode_index,
-                'learning_material': learning_material  # 🔥 Include in broadcast
+                'learning_material': learning_material
             }, room=room)
 
     @socketio.on('start_game')
@@ -391,8 +384,6 @@ def init_all_socketio_events(socketio, supabase, detector=None):
                 if "final_scores" not in rooms[room]:
                     rooms[room]["final_scores"] = {}
                 rooms[room]["final_scores"][user_id] = data['final_score']
-                print(f"Stored score for user {user_id}: {data['final_score']}")
-                print(f"Current final_scores: {rooms[room]['final_scores']}")
 
             save_game_results(room)
 
@@ -423,8 +414,7 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         if room in rooms:
             del rooms[room]
 
-    # ===== TRANSLATOR/SERVER PROCESSING EVENTS =====
-    # Only used when client-side processing is NOT enabled (translator page)
+    # ===== practice PROCESSING EVENTS =====
 
     @socketio.on('set_learning_material')
     def handle_set_learning_material(data):
@@ -433,7 +423,7 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         print("eto yung learning material: ", learning_material)
         if room in rooms:
             rooms[room]['learning_material'] = learning_material
-            print(f"✅ Room {room}: Learning material set to {learning_material}")
+            print(f"Room {room}: Learning material set to {learning_material}")
 
 ###########################################################################################################
 # word related socket
@@ -485,7 +475,7 @@ def init_all_socketio_events(socketio, supabase, detector=None):
                 if user_id in handle_process_fsl_frame.no_hands_counter:
                     del handle_process_fsl_frame.no_hands_counter[user_id]
             
-            print(f"🧹 Cleaned up FSL session for user {user_id}")
+            print(f"Cleaned up FSL session for user {user_id}")
 
     @socketio.on('get_supported_signs')
     def handle_get_supported_signs():
@@ -506,16 +496,11 @@ def init_all_socketio_events(socketio, supabase, detector=None):
 
     @socketio.on('process_fsl_frame')
     def handle_process_fsl_frame(data):
-        """
-        OPTIMIZED: Process frame for FSL motion recognition
-        Only runs prediction every N frames to prevent server overload
-        """
         user_id = session.get('user_id')
         if not user_id:
             emit('error', {'message': 'Not authenticated'})
             return
         
-        # Check if FSL predictor is available
         if not hasattr(current_app, 'fsl_predictor') or not current_app.fsl_predictor:
             emit('prediction_result', {
                 'prediction': 'FSL model not loaded',
@@ -533,15 +518,12 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         start_time = time.time()
         
         try:
-            # Decode base64 image
             image_data = data['image'].split(',')[1]
             image_bytes = base64.b64decode(image_data)
             
-            # Convert to PIL Image then to OpenCV format
             pil_image = Image.open(io.BytesIO(image_bytes))
             frame = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
             
-            # Extract hand landmarks using MediaPipe
             landmarks_data = extract_fsl_landmarks_from_frame(frame)
             
             if landmarks_data:
@@ -563,17 +545,13 @@ def init_all_socketio_events(socketio, supabase, detector=None):
                 # Reset no-hands streak since we detected hands
                 handle_process_fsl_frame.no_hands_streak[user_id] = 0
                 
-                # Add to motion buffer
                 handle_process_fsl_frame.user_buffers[user_id].append(landmarks_data)
                 
-                # Keep only last 30 frames
                 if len(handle_process_fsl_frame.user_buffers[user_id]) > 30:
                     handle_process_fsl_frame.user_buffers[user_id].pop(0)
                 
                 buffer_size = len(handle_process_fsl_frame.user_buffers[user_id])
                 
-                # 🔥 OPTIMIZATION: Only predict every 3 frames after reaching minimum
-                # This prevents server overload while still giving responsive feedback
                 handle_process_fsl_frame.frame_counters[user_id] += 1
                 frame_count = handle_process_fsl_frame.frame_counters[user_id]
                 
@@ -590,23 +568,13 @@ def init_all_socketio_events(socketio, supabase, detector=None):
                 
                 # Prediction phase: only predict every 3 frames
                 if frame_count % 3 != 0:
-                    # Skip this frame, don't predict
                     return
                 
                 # Make prediction
                 try:
                     sequence_frames = handle_process_fsl_frame.user_buffers[user_id].copy()
-                    
                     prediction_result = current_app.fsl_predictor.predict(sequence_frames)
-                    
                     processing_time = time.time() - start_time
-                    
-                    # Log only significant predictions
-                    pred = prediction_result['prediction']
-                    conf = prediction_result['confidence']
-                    
-                    if conf > 50:  # Only log confident predictions
-                        print(f"🎯 {pred} ({conf:.1f}%) | Buffer: {buffer_size} | Time: {processing_time*1000:.0f}ms")
                     
                     # Send result to client
                     result = {
@@ -621,14 +589,14 @@ def init_all_socketio_events(socketio, supabase, detector=None):
                     emit('prediction_result', result)
                     
                 except Exception as e:
-                    print(f"❌ Prediction error: {e}")
+                    print(f"Prediction error: {e}")
                     emit('prediction_result', {
                         'prediction': 'prediction_error',
                         'confidence': 0.0,
                         'processing_time': time.time() - start_time
                     })
             else:
-                # 🔥 NO HANDS DETECTED - RESET BUFFER AFTER A FEW FRAMES
+                #  nO HANDS DETECTED - RESET BUFFER AFTER A FEW FRAMES
                 if not hasattr(handle_process_fsl_frame, 'no_hands_streak'):
                     handle_process_fsl_frame.no_hands_streak = {}
                 
@@ -643,9 +611,8 @@ def init_all_socketio_events(socketio, supabase, detector=None):
                         old_size = len(handle_process_fsl_frame.user_buffers[user_id])
                         handle_process_fsl_frame.user_buffers[user_id] = []
                         handle_process_fsl_frame.frame_counters[user_id] = 0
-                        print(f"🧹 Cleared buffer ({old_size} frames) - no hands for 5 frames")
+                        print(f"Cleared buffer ({old_size} frames) - no hands for 5 frames")
                     
-                    # Reset streak counter
                     handle_process_fsl_frame.no_hands_streak[user_id] = 0
                 
                 # Only send "no hands" message every 10 frames
@@ -657,7 +624,7 @@ def init_all_socketio_events(socketio, supabase, detector=None):
                     })
                     
         except Exception as e:
-            print(f"❌ Frame processing error: {e}")
+            print(f"Frame processing error: {e}")
             import traceback
             traceback.print_exc()
             emit('error', {'message': f'Frame processing failed: {str(e)}'})
@@ -706,8 +673,6 @@ def save_game_results(room):
         expected_participants = len(rooms[room].get("participants", []))
         actual_scores = len(rooms[room]["final_scores"])
         
-        print(f"Room {room}: {actual_scores}/{expected_participants} scores received")
-        
         # Only save when all participants have sent scores
         if actual_scores < expected_participants:
             print(f"Waiting for more scores in room {room}")
@@ -734,8 +699,7 @@ def save_game_results(room):
                 'room_id': room_id,
                 'score': final_score
             }).execute()
-            print(f"Saved score: User {user_id} = {final_score}")
-        
+
         # Mark as saved and clear for next game
         rooms[room]["scores_saved"] = True
         rooms[room]["final_scores"] = {}

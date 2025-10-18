@@ -8,7 +8,6 @@ document.addEventListener("DOMContentLoaded", function() {
             profileMenu.style.display === "flex" ? "none" : "flex";
     });
 
-    // Close menu if clicking outside
     document.addEventListener("click", function() {
         profileMenu.style.display = "none";
     });

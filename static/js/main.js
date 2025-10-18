@@ -1,15 +1,8 @@
-// main.js - Practice page with client-side processing for alphabet/numbers
 let detector;
 let currentModel = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     const selectModelDropdown = document.getElementById('select-model');
-    
-    // Disable detection button until model is selected
-    const toggleProcessingBtn = document.getElementById('toggleProcessing');
-    if (toggleProcessingBtn) {
-        toggleProcessingBtn.disabled = true;
-    }
     
     // Initialize detector with client-side processing (for alphabet/numbers)
     detector = new SignLanguageDetector({
@@ -18,8 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
         enableLearningMode: false,
         enableFpsCounter: true,
         processingInterval: 300,
-        useClientSideProcessing: true,  // 🔥 Client-side for alphabet/numbers
-        requireSocket: false,  // 🔥 No socket needed for alphabet/numbers
+        useClientSideProcessing: true,
+        requireSocket: false,
         onCameraStart: function() {
             console.log('Camera started in practice mode');
         },
@@ -37,23 +30,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Handle model selection
+    // model selection
     if (selectModelDropdown) {
         selectModelDropdown.addEventListener('change', async function(event) {
             const selectedModel = event.target.value;
             
             if (!selectedModel) return;
             
-            console.log(`Selected model: ${selectedModel}`);
-            
-            if (selectedModel === 'word') {
-                // Words not supported in practice mode (needs motion capture)
-                alert('⚠️ Words are not supported in Practice mode.\n\nWords require motion capture over multiple frames.\nPlease use the Learn section for word practice.');
-                selectModelDropdown.value = '';
-                return;
-            }
-            
-            // Load the selected model (alphabet or number) on client-side
+            // load model
             if (detector && detector.clientSideClassifier) {
                 console.log(`Loading ${selectedModel} model...`);
                 
@@ -62,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (success) {
                     currentModel = selectedModel;
                     
-                    // Update class names based on model
+                    // class names based on model
                     if (selectedModel === 'number') {
                         detector.asl_classes = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
                         console.log('🔢 Using numbers');
@@ -77,34 +61,26 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.log('🔤 Using alphabet');
                     }
                     
-                    // Enable detection button
                     if (toggleProcessingBtn) {
                         toggleProcessingBtn.disabled = false;
                     }
                     
-                    // Show notification
+                    // notif
                     showModelSwitchNotification(selectedModel);
                     
                     console.log(`✅ Loaded ${selectedModel} model successfully`);
                 } else {
-                    console.error(`❌ Failed to load ${selectedModel} model`);
                     alert(`Failed to load ${selectedModel} model. Please refresh the page.`);
                     selectModelDropdown.value = '';
                 }
             } else {
-                console.error('Detector or classifier not available');
                 alert('Detector not ready. Please refresh the page.');
             }
         });
     }
-    
-    console.log('Practice mode initialized with client-side processing');
 });
 
 function showModelSwitchNotification(modelType) {
-    /**
-     * Show notification when model is switched
-     */
     const notification = document.createElement('div');
     notification.style.cssText = `
         position: fixed;
@@ -124,7 +100,6 @@ function showModelSwitchNotification(modelType) {
     const modelDisplay = modelType.charAt(0).toUpperCase() + modelType.slice(1);
     notification.textContent = `📚 Now using: ${modelDisplay}`;
     
-    // Add animation styles if not present
     if (!document.getElementById('notificationStyles')) {
         const style = document.createElement('style');
         style.id = 'notificationStyles';
@@ -143,7 +118,6 @@ function showModelSwitchNotification(modelType) {
     
     document.body.appendChild(notification);
     
-    // Remove after 2 seconds
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease-in';
         setTimeout(() => {

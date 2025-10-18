@@ -1,4 +1,3 @@
-// SignLanguageDetector - MediaPipe client + landmarks-only server processing
 class SignLanguageDetector {
     constructor(config = {}) {
         this.config = {
@@ -13,7 +12,6 @@ class SignLanguageDetector {
             ...config
         };
 
-        // DOM elements
         this.elements = this.getDOMElements();
         
         // State variables
@@ -37,7 +35,6 @@ class SignLanguageDetector {
         
         // Initialize client-side classifier if needed
         if (this.useClientSideProcessing) {
-            // Initialize will be called async after construction
             this.initClientSideClassifier().then(() => {
                 console.log('Client-side classifier ready');
             });
@@ -94,12 +91,9 @@ class SignLanguageDetector {
             }
         }
 
-
         // Initialize MediaPipe and setup
         this.initMediaPipe();
         this.setupEventListeners();
-        
-        console.log('SignLanguageDetector initialized - MediaPipe landmarks + server RandomForest');
     }
 
     getDOMElements() {
@@ -141,7 +135,7 @@ class SignLanguageDetector {
             await this.hands.setOptions({
                 maxNumHands: 2,
                 modelComplexity: 1,
-                minDetectionConfidence: 0.5, // Lowered from 0.7
+                minDetectionConfidence: 0.5,
                 minTrackingConfidence: 0.5
             });
 
@@ -149,7 +143,7 @@ class SignLanguageDetector {
                 this.processMediaPipeResults(results);
             });
 
-            await this.hands.initialize(); // Add explicit initialization
+            await this.hands.initialize();
 
             this.isMediaPipeReady = true;
             console.log('MediaPipe initialized successfully');
@@ -334,7 +328,7 @@ class SignLanguageDetector {
         }
     }
 
-    async loadWords() {
+    async loadWords() { // for fill in blanks
         try {
             const response = await fetch('/static/models/words.json');
             const data = await response.json();
@@ -504,11 +498,11 @@ class SignLanguageDetector {
             return;
         }
         
-        // Select random word
+        // random word
         const randomIndex = Math.floor(Math.random() * this.words.words.length);
         this.currentWord = this.words.words[randomIndex];
         
-        // Select random position to blank
+        // random position to blank
         const wordLength = this.currentWord.word.length;
         this.currentBlankIndex = Math.floor(Math.random() * (wordLength - 1)) + 1;
         
@@ -519,14 +513,11 @@ class SignLanguageDetector {
         const wordArray = this.currentWord.word.split('');
         wordArray[this.currentBlankIndex] = '_';
         this.wordDisplay = wordArray.join('');
-        
-        console.log(`Word: ${this.currentWord.word}, Blank: ${this.currentBlankIndex}, Target: ${this.currentTargetLetter}`);
     }
-
 
     handleGameLogic(prediction, confidencePercent) {
         if (this.gameMode === 'time_starts') {
-            // Original time-based game logic
+            // time-based game logic
             if (prediction === this.targetletter && confidencePercent >= 30) {
                 this.holdCounter += 1;
             } else {
@@ -556,7 +547,6 @@ class SignLanguageDetector {
                 this.score += 10;
                 this.holdCounter = 0;
                 
-                // Select new word with blank
                 this.selectRandomWordWithBlank();
                 this.updateGameUI();
 
@@ -759,8 +749,6 @@ class SignLanguageDetector {
                         <div style="font-size: 1rem; letter-spacing: 0.5rem; font-weight: bold;">${this.wordDisplay.toUpperCase()}</div>
                     </div>
                 `;
-                //<div style="font-size: 1.5rem; margin-top: 10px; opacity: 0.8;">Sign: ${this.currentTargetLetter}</div>
-
             }
         }
     }
@@ -894,11 +882,6 @@ class SignLanguageDetector {
     }
 
     async setModelType(modelType) {
-        /**
-         * Switch between 'alphabet' and 'number' models
-         * @param {string} modelType - Either 'alphabet' or 'number'
-         * @returns {Promise<boolean>} Success status
-         */
         if (!this.clientSideClassifier) {
             console.error('Client-side classifier not initialized');
             return false;
@@ -933,10 +916,6 @@ class SignLanguageDetector {
     }
 
     getModelType() {
-        /**
-         * Get the currently loaded model type
-         * @returns {string|null} Current model type ('alphabet', 'number', or null)
-         */
         if (this.clientSideClassifier) {
             return this.clientSideClassifier.getCurrentModelType();
         }
@@ -944,16 +923,10 @@ class SignLanguageDetector {
     }
 
     isClientSideProcessing() {
-        /**
-         * Check if client-side processing is enabled and ready
-         * @returns {boolean}
-         */
         return this.useClientSideProcessing && 
             this.clientSideClassifier && 
             this.clientSideClassifier.isModelLoaded;
     }
-
-
     
     processMediaPipeResults(results) {
         if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
@@ -990,7 +963,6 @@ class SignLanguageDetector {
                 this.sendLandmarksToServer(handsData);
             }
             
-            // Draw landmarks for visual feedback
             this.drawLandmarks(this.formatLandmarksForDisplay(results.multiHandLandmarks));
             
         } catch (error) {

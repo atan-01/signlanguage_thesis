@@ -6,10 +6,8 @@ import numpy as np
 from collections import deque
 import os
 
-# Create blueprint
 translator_bp = Blueprint('translator', __name__, url_prefix='/main')
 
-# Sign Language Detector Class
 class WebSignLanguageDetector:
     def __init__(self, model_path='./model_alphabet_compare.p', confidence_threshold=0.7):
         self.model_loaded = False
@@ -29,8 +27,8 @@ class WebSignLanguageDetector:
             min_tracking_confidence=0.5
         )
         
-        self.prediction_window = deque(maxlen=5) #10
-        self.confidence_window = deque(maxlen=5) #10
+        self.prediction_window = deque(maxlen=5)
+        self.confidence_window = deque(maxlen=5)
         
         self.stable_prediction = "No gesture"
         self.detection_confidence = 0.0
