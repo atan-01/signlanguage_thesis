@@ -11,7 +11,7 @@ def get_user_by_id(user_id):
     try:
         result = supabase.table('users').select('*').eq('id', user_id).execute()
         user = result.data[0]
-        user["created_at"] = datetime.fromisoformat(user["created_at"].replace("Z", "+00:00")).strftime("%B %d, %Y")
+        user["created_at"] = format_created_at(user["created_at"])
         return user
     except Exception as e:
         print(f"Error getting user by ID: {e}")
@@ -24,7 +24,8 @@ def get_user_by_username(username):
         result = supabase.table('users').select('*').eq('username', username).execute()
         if result.data:
             user = result.data[0]
-            user["created_at"] = datetime.fromisoformat(user["created_at"].replace("Z", "+00:00")).strftime("%B %d, %Y")
+            user["created_at"] = format_created_at(user["created_at"])
+            print("User data from Supabase:", user)
             return user
         return None
     except Exception as e:
@@ -84,7 +85,7 @@ def profile(username):
     # Process game sessions (add room data and format dates)
     for s in user_game_sessions:
         s["room"] = rooms_by_id.get(s["room_id"])
-        s["created_at"] = datetime.fromisoformat(s["created_at"].replace("Z", "+00:00")).strftime("%B %d, %Y")
+        s["created_at"] = format_created_at(s["created_at"])
         s["is_creator"] = False
         s["learning_material"] = s["room"]["learning_material"] if s["room"] else None
 
@@ -98,7 +99,7 @@ def profile(username):
                 "room_id": room["id"],
                 "room": room,
                 "score": None,  # No score for creator who didn't participate
-                "created_at": parser.parse(room["created_at"]).strftime("%B %d, %Y"),
+                "created_at": format_created_at(room["created_at"]),
                 "is_creator": True,
                 "learning_material": room.get("learning_material")
             })
@@ -172,3 +173,24 @@ def room_details(room_id):
         creator_username=creator_username,
         participants=game_sessions
     )
+
+def format_created_at(date_str):
+    try:
+        # Normalize by inserting 'T' if missing between date and time
+        if " " in date_str and "T" not in date_str:
+            date_str = date_str.replace(" ", "T")
+
+        # If it ends with Z, convert to +00:00 (supabase UTC notation)
+        if date_str.endswith('Z'):
+            date_str = date_str.replace("Z", "+00:00")
+
+        dt = datetime.fromisoformat(date_str)
+        return dt.strftime("%B %d, %Y")
+
+    except Exception:
+        # Fallback - handle any remaining formats
+        try:
+            dt = parser.parse(date_str)
+            return dt.strftime("%B %d, %Y")
+        except Exception:
+            return date_str  # Return original if parsing completely fails

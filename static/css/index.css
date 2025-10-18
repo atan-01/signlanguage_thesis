@@ -220,6 +220,95 @@ body {
     font-size: 0.9rem;
 }
 
+.choose-pfp-container{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 3rem;
+    height: 5rem;
+}
+
+.choose-pfp-container .btn{
+    height: 50%;
+    width: 60%;
+    font-size: small;
+    padding: 0;
+}
+
+.selectedavatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    margin-top: 10px;
+}
+
+/* Modal background */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+}
+
+/* Modal content */
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 350px;
+    text-align: center;
+}
+
+.avatar-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.avatar-grid img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.avatar-grid img:hover {
+    transform: scale(1.1);
+}
+
+.avatar-grid img.selected {
+    border-color: #4CAF50;
+}
+
+.modal-actions {
+    margin-top: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+}
+
+.modal-actions .btn {
+    width: 8rem;
+    height: 3rem;
+    box-sizing: border-box;
+}
+
+
+.btn.cancel {
+    background-color: gray;
+}
+
+
+
+
 @media (max-width: 500px) {
     .auth-container {
         margin: 10px;

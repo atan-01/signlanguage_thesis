@@ -40,6 +40,8 @@ def home():
     if not user_data:
         return redirect(url_for('auth.index'))
     
+    msg = request.args.get("msg")
+    
     if request.method == "POST":
         name = user_data['username']
         code = request.form.get("code")
@@ -73,4 +75,4 @@ def home():
 
         return redirect(url_for('room.room', room_code=room))
 
-    return render_template('home.html', user=user_data)
+    return render_template('home.html', user=user_data, error=msg)

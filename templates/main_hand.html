@@ -5,15 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Language Detection</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main_hand.css') }}">
-    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js" defer></script>
-    <!-- Load the unified module first -->
-    <script src="{{ url_for('static', filename='js/signLanguageDetector.js') }}" defer></script>
-    <!-- Then load the main-specific script -->
-    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+    <!-- MediaPipe -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    
+    <!-- 🔥 Load client-side classifier FIRST -->
+    <script src="{{ url_for('static', filename='js/clientSideClassifier.js') }}" defer></script>
+    <!-- Then load the detector -->
+    <script src="{{ url_for('static', filename='js/signLanguageDetector.js') }}" defer></script>
+    <!-- Finally load main.js -->
+    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
 </head>
 <body>
     <header>
@@ -33,20 +36,22 @@
         </nav>
     </header>
     <div class="container">
-        <div class="content-header">
-            <h1>🤟 Sign Language Detection</h1>
-            <div id="status" class="status disconnected">Connecting...</div>
-        </div>
-
         <!-- User Info Panel -->
         {% if user %}
         <div class="user-info">
             <div class="user-welcome">
-                <div class="user-avatar">{{ user.username[0].upper() }}</div>   <!-- user from python (user=user_data)-->
+                <div class="user-avatar">{{ user.username[0].upper() }}</div>
                 <div>
                     <div style="font-size: 1.1rem;">Welcome back, <strong>{{ user.username }}</strong>!</div>
                     <div style="font-size: 0.9rem; opacity: 0.8;">Ready to practice sign language?</div>
                 </div>
+            </div>
+            <div class="select-model">
+                <select id="select-model" name="Select Model">
+                    <option value="" disabled selected>Select Learning Material</option>
+                    <option value="alphabet">Alphabet</option>
+                    <option value="number">Numbers</option>
+                </select>
             </div>
         </div>
         {% endif %}
@@ -59,7 +64,6 @@
 
         <div class="controls">
             <button id="startBtn" class="btn">Start Camera</button>
-            <button id="stopBtn" class="btn danger" disabled>Stop Camera</button>
             <button id="toggleProcessing" class="btn" disabled>Start Detection</button>
         </div>
 
@@ -80,6 +84,7 @@
         <div class="info-panel">
             <h3>Instructions:</h3>
             <ul>
+                <li>Select a learning material from the dropdown (Alphabet or Numbers)</li>
                 <li>Click "Start Camera" to access your webcam</li>
                 <li>Click "Start Detection" to begin sign language recognition</li>
                 <li>Show your hand gestures to the camera</li>
@@ -105,24 +110,9 @@
             });
         });
 
-        function profile(username) {
-            window.location.href = `/profile/${username}`;
-        }
-
         document.getElementById("logoutBtn").addEventListener("click", function() {
             window.location.href = this.dataset.href;
         });
-        function practicebtn() {
-            window.location.href = '/main/';
-        }
-
-        function learnasl() {
-            window.location.href = '/learn/';
-        }
-
-        function userprofile(username) {
-            window.location.href = `/profile/${username}`;
-        }
     </script>
 </body>
 </html>

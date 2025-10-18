@@ -83,7 +83,8 @@ def register():
         password = data.get('password')
         role = data.get('role')
         grade = data.get('grade')
-        profile_picture = 'images/profile_pictures/default.jpg'
+        filename = data.get('profile_picture', 'default.jpg')
+        profile_picture = f"images/profile_pictures/{filename}"
 
         if get_user_by_username(username):
             return jsonify({'error': 'Username already exists'}), 400

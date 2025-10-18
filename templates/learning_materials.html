@@ -8,15 +8,16 @@
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@100..700&family=Baloo+2:wght@400..800&family=Gantari:ital,wght@0,100..900;1,100..900&family=Mynerve&family=Outfit:wght@100..900&display=swap" rel="stylesheet">    <title>Document</title>
+    <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@100..700&family=Baloo+2:wght@400..800&family=Gantari:ital,wght@0,100..900;1,100..900&family=Mynerve&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/learning_materials.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
     <script src="{{ url_for('static', filename='js/clientSideClassifier.js') }}" defer></script>
+    <title>{{ category.title() }}</title>
 </head>
-<body >
+<body class="{{ category }}">
     <div class="content-to-blur" id="main-content">
         <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="logo" onclick="back()">
         <div class="top-wrapper">
@@ -39,7 +40,11 @@
                         </div>
                     {% endfor %}
                 {% elif category == 'words' %}
-                    <p>This is where you teach Common ASL Words.</p>
+                    {% for word in items %}
+                        <div class="learn-mats-buttons">
+                            <button class="class-btn" onclick="matcontent('{{ word.class }}', '{{ word.instruction}}', '{{ word.image_path}}', '{{ category.title() }}')">{{ word.class }}</button>
+                        </div>
+                    {% endfor %}
                 {% endif %}
             </div>
         </div>

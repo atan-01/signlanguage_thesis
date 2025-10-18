@@ -1,6 +1,6 @@
 body {
   background-image: url('../images/Categories.png');
-  background-size: fit;    /* scale image to fill button */
+  background-size: fit;
   background-position: center;
   background-repeat: no-repeat;
   margin: 0;
@@ -25,30 +25,30 @@ body {
 
 .button-wrapper {
   display: flex;
-  gap: 40px; /* spacing between buttons */
-  flex-wrap: wrap; /* allow wrapping on smaller screens */
+  gap: 40px;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  column-gap: 40px;       /* only horizontal gap */
+  column-gap: 40px;
   row-gap: 0;
   padding-top: 3vh;             
 }
 
 .icon-button {
-  width: 15vw;              /* or whatever size you want */
+  width: 15vw;
   height: 45vh;
-  background-size: contain;    /* scale image to fill button */
+  background-size: contain;
   background-position: center;
   background-repeat: no-repeat;
   background-color: transparent;
   border: none;
-  border-radius: 12px;       /* optional: rounded corners */
+  border-radius: 12px;
   cursor: pointer;
   transition: transform 0.2s;
 }
 
 .icon-button:hover {
-  transform: scale(1.05);    /* grow a bit on hover */
+  transform: scale(1.05);
 }
 
 .alphabet-btn {

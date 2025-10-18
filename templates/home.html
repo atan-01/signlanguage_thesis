@@ -30,13 +30,7 @@
             <h1 class="welcome-title">Ready to connect?</h1>
             <p class="welcome-subtitle">Start or join a game</p>
         </div>
-        <!-- if game is ongoing-->
-        {% if request.args.get("msg") %}
-            <div class="alert alert-warning">
-                {{ request.args.get("msg") }}
-            </div>
-        {% endif %}
-
+        
         <button class="btn" onclick="practicebtn()">Practice</button>
 
         <form method="post" class="buttons">

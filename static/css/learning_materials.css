@@ -1,11 +1,11 @@
 html, body {
     overflow: hidden;  /* disables both vertical + horizontal scrollbars */
-    height: 100%;      /* makes sure the body doesn’t extend */
+    height: 100%;
 }
 
 body {
     background-image: url('../images/bg_alphabet.png');
-    background-size: fit;    /* scale image to fill button */
+    background-size: fit;
     background-position: center;
     background-repeat: no-repeat;
     margin: 0;
@@ -50,19 +50,18 @@ body {
 
 .classes-parent {
     width: 100%;
-    display: grid;            /* simplest centering */
+    display: grid;
     place-items: center;
 }
 
 .classes {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;  /* keep this; remove the duplicate below */
+  justify-content: center;
   gap: 10px;
   padding: 20px;
-  /*background-color: #ff9800;*/
   width: 80vw;
-  box-sizing: border-box;   /* The total width is locked, paddings etc will not change the size */
+  box-sizing: border-box;
 }
 
 .learn-mats-buttons {
@@ -71,7 +70,6 @@ body {
     flex: 0 0 calc(12.5% - 10px);
     justify-content: center;
     padding: 2vh 0;
-    /*background-color: rgb(255, 0, 0);*/
 }
 
 .class-btn {
@@ -82,6 +80,10 @@ body {
     color: rgb(92, 24, 235);
     font-family: "Gantari", sans-serif;
     border-width: 11px;
+}
+
+body.words .class-btn {
+    font-size: 0.9rem;  /* smaller text for words */
 }
 
 .class_image {
@@ -245,31 +247,7 @@ body {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/* overlay after clicking button*/
 
 
 .blur-overlay {
@@ -347,27 +325,6 @@ body {
     height: 100%;
     background: linear-gradient(90deg, #ff4444, #ffaa00, #44ff44);
     transition: width 0.3s ease;
-}
-
-/* remove after debugging */
-.status {
-    padding: 10px;
-    border-radius: 5px;
-    text-align: center;
-    margin-bottom: 15px;
-    font-weight: bold;
-}
-
-.status.connected {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
-
-.status.disconnected {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
 }
 
 @media (max-width: 1200px) {    

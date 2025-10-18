@@ -65,7 +65,7 @@ nav a:hover {
 
 .dropdown {
     position: absolute;
-    top: 100%;  /* directly below profile_container */
+    top: 100%;
     right: 0;
     background: white;
     border: 1px solid #ddd;
@@ -110,7 +110,7 @@ nav a:hover {
     justify-self: center;
 
     display: flex;
-    flex-direction: column;   /* vertical stacking */
+    flex-direction: column;
     overflow: hidden;
 }
 
@@ -225,14 +225,14 @@ nav a:hover {
 }
 
 .dropdown-btn {
-    background: white; /* plain white */
+    background: white;
     color: #333;
     padding: 0.6rem 1.2rem;
     border: 1px solid #ddd;
     border-radius: 0.5rem;
     font-size: 16px;
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1); /* subtle shadow */
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .dropdown-list {
@@ -245,7 +245,7 @@ nav a:hover {
     border: 1px solid #ddd;
     border-radius: 0.5rem;
     min-width: 180px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* dropdown shadow */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     overflow: hidden;
     z-index: 100;
 }

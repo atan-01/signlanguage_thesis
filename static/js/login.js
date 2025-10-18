@@ -126,7 +126,9 @@ document.getElementById('registerForm').addEventListener('submit', async functio
     const data = {
         username: formData.get('username'),
         password: password,
-        role: formData.get('role')
+        role: formData.get('role'),
+        grade: formData.get('grade') || null,
+        profile_picture: document.getElementById('selectedAvatar').value
     };
 
     try {
@@ -152,5 +154,50 @@ document.getElementById('registerForm').addEventListener('submit', async functio
         showError('Network error. Please try again.');
     } finally {
         setLoading(false);
+    }
+});
+
+// Avatar selection state
+let selectedAvatarTemp = null;
+
+function openAvatarModal() {
+    const modal = document.getElementById("avatarModal");
+    modal.style.display = "flex";
+
+    const avatarGrid = document.getElementById("avatarGrid");
+    avatarGrid.innerHTML = ""; // clear previous
+
+    // Predefined images
+    const avatars = ["darwin.png", "kirby.png", "roblox_guy.png", "roblox_girl.png", "default.jpg"];
+
+    avatars.forEach(img => {
+        const imgElement = document.createElement("img");
+        imgElement.src = `/static/images/profile_pictures/${img}`;
+        imgElement.onclick = () => {
+            document.querySelectorAll(".avatar-grid img").forEach(i => i.classList.remove("selected"));
+            imgElement.classList.add("selected");
+            selectedAvatarTemp = img;
+        };
+        avatarGrid.appendChild(imgElement);
+    });
+}
+
+function closeAvatarModal() {
+    document.getElementById("avatarModal").style.display = "none";
+}
+
+function confirmAvatar() {
+    if (selectedAvatarTemp) {
+        document.getElementById("selectedAvatar").value = selectedAvatarTemp;
+        document.getElementById("selectedAvatarPreview").src = `/static/images/profile_pictures/${selectedAvatarTemp}`;
+    }
+    closeAvatarModal();
+}
+
+// Close when clicking outside content
+document.addEventListener("click", (e) => {
+    const modal = document.getElementById("avatarModal");
+    if (e.target === modal) {
+        closeAvatarModal();
     }
 });

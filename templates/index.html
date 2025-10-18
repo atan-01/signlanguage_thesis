@@ -63,8 +63,31 @@
                     <label for="registerGrade">Grade</label>
                     <input type="number" id="registerGrade" name="grade" min="1" step="1" required>
                 </div>
+                <div class="form-group">
+                    <label>Profile Picture</label>
+                    <div class="choose-pfp-container">
+                        <button type="button" class="btn" onclick="openAvatarModal()">Choose Profile Picture</button>
+                        <img id="selectedAvatarPreview" src="{{ url_for('static', filename='images/profile_pictures/default.jpg') }}" 
+                            alt="Selected Avatar" class="selectedavatar">
+                        <input type="hidden" id="selectedAvatar" name="profile_picture" value="default.jpg">
+                    </div>
+                </div>
                 <button type="submit" class="btn">Register</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Avatar Selection Modal -->
+    <div id="avatarModal" class="modal">
+        <div class="modal-content">
+            <h3>Select Profile Picture</h3>
+            <div class="avatar-grid" id="avatarGrid">
+                <!-- JS will load avatars here -->
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn" onclick="confirmAvatar()">Confirm</button>
+                <button type="button" class="btn cancel" onclick="closeAvatarModal()">Cancel</button>
+            </div>
         </div>
     </div>
 </body>

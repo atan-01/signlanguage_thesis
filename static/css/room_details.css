@@ -65,7 +65,7 @@ nav a:hover {
 
 .dropdown {
     position: absolute;
-    top: 100%;  /* directly below profile_container */
+    top: 100%;
     right: 0;
     background: white;
     border: 1px solid #ddd;
@@ -98,6 +98,7 @@ nav a:hover {
     border-radius: 50%;
     object-fit: cover;
 }
+
 
 /* Room details page styling */
 .room-details-container {
@@ -234,7 +235,6 @@ nav a:hover {
     color: #666;
 }
 
-/* Responsive adjustments */
 @media (max-width: 48rem) {
     .room-details-container {
         padding: 1.5rem;

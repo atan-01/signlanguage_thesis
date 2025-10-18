@@ -5,6 +5,13 @@ from flask import session, current_app, request, jsonify
 from flask_socketio import emit, join_room, leave_room, send
 import numpy as np
 
+
+import time
+import cv2
+import base64
+import io
+from PIL import Image
+
 def get_user_by_id(user_id, supabase_client):
     """Get user by ID from Supabase"""
     try:
@@ -175,6 +182,11 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         user_id = session.get('user_id')
         is_creator = session.get('created', False)
         
+        if hasattr(handle_process_fsl_frame, 'user_buffers'):
+            if user_id in handle_process_fsl_frame.user_buffers:
+                del handle_process_fsl_frame.user_buffers[user_id]
+                print(f"Cleaned up FSL motion buffer for user {user_id}")
+
         if not name:
             return
         
@@ -247,15 +259,18 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         model_loaded = detector.model_loaded if detector else False
         emit('status', {'message': 'Connected - Server processing', 'model_loaded': model_loaded}, to=request.sid)
 
+        # 🔥 Send game settings to new joiner (including learning material)
         game_type = rooms[room].get('game_type')
         duration = rooms[room].get('duration', 30)
         gamemode_index = rooms[room].get('gamemode_index')
+        learning_material = rooms[room].get('learning_material', 'alphabet')  # 🔥 Get stored material
 
         if game_type:
             emit('game_type_set', {
                 'type': game_type,
                 'duration': duration,
-                'gamemode_index': gamemode_index
+                'gamemode_index': gamemode_index,
+                'learning_material': learning_material  # 🔥 Send to new joiner
             }, to=request.sid)
 
     @socketio.on('message')
@@ -308,15 +323,22 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         game_type = data.get('type')
         gamemode_index = data.get('gamemode_index')
         duration = data.get('duration', 30)
+        learning_material = data.get('learning_material', 'alphabet')  # Get from data
         
         if room and room in rooms:
             rooms[room]['game_type'] = game_type
             rooms[room]['duration'] = duration
             rooms[room]['gamemode_index'] = gamemode_index
+            rooms[room]['learning_material'] = learning_material  # 🔥 Store it
+            
+            print(f"🎮 Room {room}: Game type set to {game_type}, Material: {learning_material}")
+            
+            # 🔥 Broadcast to ALL participants including creator
             emit('game_type_set', {
                 'type': game_type, 
                 'duration': duration, 
-                'gamemode_index': gamemode_index
+                'gamemode_index': gamemode_index,
+                'learning_material': learning_material  # 🔥 Include in broadcast
             }, room=room)
 
     @socketio.on('start_game')
@@ -403,75 +425,6 @@ def init_all_socketio_events(socketio, supabase, detector=None):
 
     # ===== TRANSLATOR/SERVER PROCESSING EVENTS =====
     # Only used when client-side processing is NOT enabled (translator page)
-    
-    @socketio.on('join_translator')
-    def handle_join_translator():
-        """Join a translator session (uses server processing)"""
-        user_id = session.get('user_id')
-        if not user_id:
-            return False
-            
-        user_data = get_user_by_id(user_id, supabase)
-        if not user_data:
-            return False
-            
-        translator_room = f"translator_{user_id}"
-        join_room(translator_room)
-        
-        model_loaded = detector.model_loaded if detector else False
-        emit('status', {'message': 'Connected to translator - Server processing', 'model_loaded': model_loaded})
-        print(f"User {user_data['username']} joined translator")
-
-    @socketio.on('leave_translator')
-    def handle_leave_translator():
-        """Leave translator session"""
-        user_id = session.get('user_id')
-        if user_id:
-            translator_room = f"translator_{user_id}"
-            leave_room(translator_room)
-            print(f"User left translator session")
-
-    @socketio.on('process_landmarks_translator')
-    def handle_translator_landmarks(data):
-        """
-        Handle landmark processing for TRANSLATOR only
-        (Learning materials use client-side processing now)
-        """
-        if not detector:
-            emit('error', {'message': 'Detector not available'})
-            return
-            
-        try:
-            landmarks_data = data.get('landmarks')
-            
-            if landmarks_data is None:
-                emit('prediction_result', {
-                    'prediction': 'No gesture',
-                    'confidence': 0
-                })
-                return
-            
-            processed_features = process_landmarks_for_prediction(landmarks_data)
-            
-            if processed_features is not None:
-                result = detector.process_landmarks(processed_features)
-                emit('prediction_result', result)
-            else:
-                emit('prediction_result', {
-                    'prediction': 'No gesture',
-                    'confidence': 0
-                })
-            
-        except Exception as e:
-            print(f"Error processing landmarks in translator: {e}")
-            emit('error', {'message': str(e)})
-
-    # NOTE: Removed 'process_landmarks_room' - rooms now use client-side processing!
-    # If you need server processing for rooms in the future, add it back
-
-    print("SocketIO events initialized")
-    print("✅ Server processing available for: translator")
-    print("✅ Client-side processing used by: rooms, learning materials")
 
     @socketio.on('set_learning_material')
     def handle_set_learning_material(data):
@@ -481,6 +434,234 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         if room in rooms:
             rooms[room]['learning_material'] = learning_material
             print(f"✅ Room {room}: Learning material set to {learning_material}")
+
+###########################################################################################################
+# word related socket
+
+    @socketio.on('join_fsl_learning')
+    def handle_join_fsl_learning():
+        """Join FSL words learning session"""
+        user_id = session.get('user_id')
+        if not user_id:
+            return False
+        
+        user_data = get_user_by_id(user_id, supabase)
+        if not user_data:
+            return False
+        
+        fsl_room = f"fsl_learning_{user_id}"
+        join_room(fsl_room)
+        
+        # Check if FSL predictor is available
+        fsl_available = hasattr(current_app, 'fsl_predictor') and current_app.fsl_predictor is not None
+        
+        emit('status', {
+            'connected': True,
+            'fsl_available': fsl_available,
+            'message': 'Connected to FSL words learning' if fsl_available else 'Connected (FSL model not available)'
+        })
+        
+        print(f"User {user_data['username']} joined FSL words learning")
+
+    @socketio.on('leave_fsl_learning')
+    def handle_leave_fsl_learning():
+        """
+        Cleanup when user finishes learning session
+        """
+        user_id = session.get('user_id')
+        if user_id:
+            # Clean up this user's motion buffer
+            if hasattr(handle_process_fsl_frame, 'user_buffers'):
+                if user_id in handle_process_fsl_frame.user_buffers:
+                    del handle_process_fsl_frame.user_buffers[user_id]
+            
+            # Clean up frame counter
+            if hasattr(handle_process_fsl_frame, 'frame_counters'):
+                if user_id in handle_process_fsl_frame.frame_counters:
+                    del handle_process_fsl_frame.frame_counters[user_id]
+            
+            # Clean up no hands counter
+            if hasattr(handle_process_fsl_frame, 'no_hands_counter'):
+                if user_id in handle_process_fsl_frame.no_hands_counter:
+                    del handle_process_fsl_frame.no_hands_counter[user_id]
+            
+            print(f"🧹 Cleaned up FSL session for user {user_id}")
+
+    @socketio.on('get_supported_signs')
+    def handle_get_supported_signs():
+        """Send list of supported FSL words"""
+        try:
+            if hasattr(current_app, 'fsl_predictor') and current_app.fsl_predictor:
+                signs = current_app.fsl_predictor.class_names
+            else:
+                # Default list if model not loaded
+                signs = ['Blue', 'Green', 'Hi-Hello', 'Orange', 'Red', 'Yellow', 
+                        'Grandmother', 'Shy', 'Sad', 'Apple', 'Who', 'Which']
+            
+            emit('supported_signs', {'signs': signs})
+            
+        except Exception as e:
+            print(f"Error getting supported signs: {e}")
+            emit('error', {'message': 'Could not load supported signs'})
+
+    @socketio.on('process_fsl_frame')
+    def handle_process_fsl_frame(data):
+        """
+        OPTIMIZED: Process frame for FSL motion recognition
+        Only runs prediction every N frames to prevent server overload
+        """
+        user_id = session.get('user_id')
+        if not user_id:
+            emit('error', {'message': 'Not authenticated'})
+            return
+        
+        # Check if FSL predictor is available
+        if not hasattr(current_app, 'fsl_predictor') or not current_app.fsl_predictor:
+            emit('prediction_result', {
+                'prediction': 'FSL model not loaded',
+                'confidence': 0.0
+            })
+            return
+        
+        import time
+        import cv2
+        import numpy as np
+        import base64
+        import io
+        from PIL import Image
+        
+        start_time = time.time()
+        
+        try:
+            # Decode base64 image
+            image_data = data['image'].split(',')[1]
+            image_bytes = base64.b64decode(image_data)
+            
+            # Convert to PIL Image then to OpenCV format
+            pil_image = Image.open(io.BytesIO(image_bytes))
+            frame = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+            
+            # Extract hand landmarks using MediaPipe
+            landmarks_data = extract_fsl_landmarks_from_frame(frame)
+            
+            if landmarks_data:
+                # Initialize motion buffer and counters for this user if not exists
+                if not hasattr(handle_process_fsl_frame, 'user_buffers'):
+                    handle_process_fsl_frame.user_buffers = {}
+                
+                if not hasattr(handle_process_fsl_frame, 'frame_counters'):
+                    handle_process_fsl_frame.frame_counters = {}
+                
+                if user_id not in handle_process_fsl_frame.user_buffers:
+                    handle_process_fsl_frame.user_buffers[user_id] = []
+                    handle_process_fsl_frame.frame_counters[user_id] = 0
+
+                # Initialize no_hands_streak tracker
+                if not hasattr(handle_process_fsl_frame, 'no_hands_streak'):
+                    handle_process_fsl_frame.no_hands_streak = {}
+                
+                # Reset no-hands streak since we detected hands
+                handle_process_fsl_frame.no_hands_streak[user_id] = 0
+                
+                # Add to motion buffer
+                handle_process_fsl_frame.user_buffers[user_id].append(landmarks_data)
+                
+                # Keep only last 30 frames
+                if len(handle_process_fsl_frame.user_buffers[user_id]) > 30:
+                    handle_process_fsl_frame.user_buffers[user_id].pop(0)
+                
+                buffer_size = len(handle_process_fsl_frame.user_buffers[user_id])
+                
+                # 🔥 OPTIMIZATION: Only predict every 3 frames after reaching minimum
+                # This prevents server overload while still giving responsive feedback
+                handle_process_fsl_frame.frame_counters[user_id] += 1
+                frame_count = handle_process_fsl_frame.frame_counters[user_id]
+                
+                # Collecting phase: show progress
+                if buffer_size < 15:
+                    if buffer_size % 3 == 0:  # Update every 3 frames
+                        emit('prediction_result', {
+                            'prediction': f'Collecting motion ({buffer_size}/15)',
+                            'confidence': 0.0,
+                            'processing_time': time.time() - start_time,
+                            'buffer_size': buffer_size
+                        })
+                    return
+                
+                # Prediction phase: only predict every 3 frames
+                if frame_count % 3 != 0:
+                    # Skip this frame, don't predict
+                    return
+                
+                # Make prediction
+                try:
+                    sequence_frames = handle_process_fsl_frame.user_buffers[user_id].copy()
+                    
+                    prediction_result = current_app.fsl_predictor.predict(sequence_frames)
+                    
+                    processing_time = time.time() - start_time
+                    
+                    # Log only significant predictions
+                    pred = prediction_result['prediction']
+                    conf = prediction_result['confidence']
+                    
+                    if conf > 50:  # Only log confident predictions
+                        print(f"🎯 {pred} ({conf:.1f}%) | Buffer: {buffer_size} | Time: {processing_time*1000:.0f}ms")
+                    
+                    # Send result to client
+                    result = {
+                        'prediction': prediction_result['prediction'],
+                        'confidence': prediction_result['confidence'] / 100.0,
+                        'model_used': prediction_result.get('model_used', 'random_forest'),
+                        'processing_time': processing_time,
+                        'buffer_size': buffer_size,
+                        'all_probabilities': prediction_result.get('all_probabilities', {})
+                    }
+                    
+                    emit('prediction_result', result)
+                    
+                except Exception as e:
+                    print(f"❌ Prediction error: {e}")
+                    emit('prediction_result', {
+                        'prediction': 'prediction_error',
+                        'confidence': 0.0,
+                        'processing_time': time.time() - start_time
+                    })
+            else:
+                # 🔥 NO HANDS DETECTED - RESET BUFFER AFTER A FEW FRAMES
+                if not hasattr(handle_process_fsl_frame, 'no_hands_streak'):
+                    handle_process_fsl_frame.no_hands_streak = {}
+                
+                if user_id not in handle_process_fsl_frame.no_hands_streak:
+                    handle_process_fsl_frame.no_hands_streak[user_id] = 0
+                
+                handle_process_fsl_frame.no_hands_streak[user_id] += 1
+                
+                # After 5 consecutive frames with no hands, clear the buffer
+                if handle_process_fsl_frame.no_hands_streak[user_id] >= 5:
+                    if hasattr(handle_process_fsl_frame, 'user_buffers') and user_id in handle_process_fsl_frame.user_buffers:
+                        old_size = len(handle_process_fsl_frame.user_buffers[user_id])
+                        handle_process_fsl_frame.user_buffers[user_id] = []
+                        handle_process_fsl_frame.frame_counters[user_id] = 0
+                        print(f"🧹 Cleared buffer ({old_size} frames) - no hands for 5 frames")
+                    
+                    # Reset streak counter
+                    handle_process_fsl_frame.no_hands_streak[user_id] = 0
+                
+                # Only send "no hands" message every 10 frames
+                if handle_process_fsl_frame.no_hands_streak[user_id] % 10 == 1:
+                    emit('prediction_result', {
+                        'prediction': 'No hands detected',
+                        'confidence': 0.0,
+                        'processing_time': time.time() - start_time
+                    })
+                    
+        except Exception as e:
+            print(f"❌ Frame processing error: {e}")
+            import traceback
+            traceback.print_exc()
+            emit('error', {'message': f'Frame processing failed: {str(e)}'})
+
 
 
 ###########################################################################################################
@@ -591,3 +772,59 @@ def save_game_instance_to_db(room):
         
     except Exception as e:
         print(f"Error saving game instance: {e}")
+
+
+#########################################
+# word related
+
+def extract_fsl_landmarks_from_frame(frame):
+    """
+    Extract hand landmarks from frame using MediaPipe
+    Returns format compatible with FSL feature extractor
+    """
+    try:
+        import mediapipe as mp
+        import time
+        
+        mp_hands = mp.solutions.hands
+        hands = mp_hands.Hands(
+            static_image_mode=False,
+            max_num_hands=2,
+            min_detection_confidence=0.7,
+            min_tracking_confidence=0.5
+        )
+        
+        # Convert BGR to RGB for MediaPipe
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = hands.process(rgb_frame)
+        
+        if results.multi_hand_landmarks:
+            # Convert to the format expected by FSL feature extractor
+            frame_data = {
+                'timestamp': time.time(),
+                'hands': []
+            }
+            
+            for hand_landmarks in results.multi_hand_landmarks:
+                hand_data = {
+                    'landmarks': []
+                }
+                
+                for landmark in hand_landmarks.landmark:
+                    hand_data['landmarks'].append({
+                        'x': landmark.x,
+                        'y': landmark.y,
+                        'z': landmark.z if hasattr(landmark, 'z') else 0
+                    })
+                
+                frame_data['hands'].append(hand_data)
+            
+            hands.close()
+            return frame_data
+        
+        hands.close()
+        return None
+        
+    except Exception as e:
+        print(f"FSL Landmark extraction error: {e}")
+        return None

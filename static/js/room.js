@@ -116,10 +116,46 @@ function setupRoomSocketHandlers() {
         gameduration = data.duration;
         document.getElementById('game-type-display').style.fontSize = "2rem";
         
-        // Get learning material from data (if provided by creator)
+        // 🔥 FIX 1: Set learning material BEFORE loading model
         if (data.learning_material) {
             selectedLearningMaterial = data.learning_material;
             console.log(`🎮 Game will use ${selectedLearningMaterial} model`);
+        }
+        
+        // 🔥 FIX 2: Load the correct model for ALL participants
+        if (detector && detector.clientSideClassifier) {
+            console.log(`📥 Loading ${selectedLearningMaterial} model for participant...`);
+            const success = await detector.setModelType(selectedLearningMaterial);
+            
+            if (success) {
+                console.log(`✅ Participant loaded ${selectedLearningMaterial} model successfully`);
+                
+                // 🔥 FIX 3: Update detector's class names based on material type
+                if (selectedLearningMaterial === 'number') {
+                    detector.asl_classes = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+                    console.log('🔢 Participant using numbers as target classes');
+                } else if (selectedLearningMaterial === 'alphabet') {
+                    detector.customClassNames = {
+                        '0': 'A', '1': 'B', '2': 'C', '3': 'D', '4': 'E', '5': 'F',
+                        '6': 'G', '7': 'H', '8': 'I', '9': 'K', '10': 'L', '11': 'M',
+                        '12': 'N', '13': 'O', '14': 'P', '15': 'Q', '16': 'R', '17': 'S',
+                        '18': 'T', '19': 'U', '20': 'V', '21': 'W', '22': 'X', '23': 'Y'
+                    };
+                    detector.asl_classes = Object.values(detector.customClassNames);
+                    console.log('🔤 Participant using alphabet as target classes');
+                }
+                
+                // 🔥 FIX 4: Generate initial target AFTER model is loaded
+                if (detector.config.enableGameLogic && detector.gameMode === 'time_starts') {
+                    detector.targetletter = detector.asl_classes[Math.floor(Math.random() * detector.asl_classes.length)];
+                    detector.updateGameUI();
+                    console.log(`🎯 Initial target set to: ${detector.targetletter}`);
+                }
+                
+            } else {
+                console.error(`❌ Participant failed to load ${selectedLearningMaterial} model`);
+                alert(`Warning: Could not load ${selectedLearningMaterial} model`);
+            }
         }
         
         // Set the game mode in detector
@@ -133,38 +169,9 @@ function setupRoomSocketHandlers() {
             await detector.setGameMode(gameModeMap[data.type]);
         }
         
-        // Load appropriate model for this game
-        if (detector && detector.clientSideClassifier) {
-            if (selectedLearningMaterial !== 'words') {
-                console.log(`📥 Loading ${selectedLearningMaterial} model for game...`);
-                const success = await detector.setModelType(selectedLearningMaterial);
-                
-                if (success) {
-                    console.log(`✅ Game will use ${selectedLearningMaterial} model`);
-                    
-                    // Update detector's class names based on material type
-                    if (selectedLearningMaterial === 'number') {
-                        detector.asl_classes = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
-                        console.log('🔢 Using numbers as target classes');
-                    } else if (selectedLearningMaterial === 'alphabet') {
-                        detector.customClassNames = {
-                            '0': 'A', '1': 'B', '2': 'C', '3': 'D', '4': 'E', '5': 'F',
-                            '6': 'G', '7': 'H', '8': 'I', '9': 'K', '10': 'L', '11': 'M',
-                            '12': 'N', '13': 'O', '14': 'P', '15': 'Q', '16': 'R', '17': 'S',
-                            '18': 'T', '19': 'U', '20': 'V', '21': 'W', '22': 'X', '23': 'Y'
-                        };
-                        detector.asl_classes = Object.values(detector.customClassNames);
-                        console.log('🔤 Using alphabet as target classes');
-                    }
-                } else {
-                    console.error(`❌ Failed to load ${selectedLearningMaterial} model`);
-                    alert(`Warning: Could not load ${selectedLearningMaterial} model`);
-                }
-            }
-        }
-        
         tryEnableStartGameButton();
     });
+
     socketio.on('start_game_countdown', function(){
         game_countdown.style.position = 'fixed';
         game_countdown.style.display = 'flex';
@@ -373,7 +380,7 @@ function handleConfirmButton() {
     
     // VALIDATION 1: Check if learning material is selected
     if (!selectedLearningMaterial || selectedLearningMaterial === '' || selectModelDropdown.value === '') {
-        alert('❌ ERROR: Please select a learning material (Alphabet, Numbers, or Words)');
+        alert('❌ ERROR: Please select a learning material (Alphabet or Numbers)');
         console.error('❌ Validation failed: No learning material selected');
         return false;
     }
@@ -401,7 +408,7 @@ function handleConfirmButton() {
     const selectedGameType = modenamediv.textContent;
     const isTimerStarts = selectedGameType === 'Timer Starts' || gamemodeindex === 0;
     
-    if ((selectedLearningMaterial === 'number' || selectedLearningMaterial === 'words') && !isTimerStarts) {
+    if ((selectedLearningMaterial === 'number') && !isTimerStarts) {
         alert(`❌ ERROR: ${selectedLearningMaterial.charAt(0).toUpperCase() + selectedLearningMaterial.slice(1)} only supports "Timer Starts" game mode!\n\nPlease select "Timer Starts" before confirming.`);
         console.error(`❌ Validation failed: Invalid combination - ${selectedLearningMaterial} with ${selectedGameType}`);
         return false;
@@ -651,16 +658,11 @@ if (selectModelDropdown) {
         console.log(`Learning material selected: ${selectedLearningMaterial}`);
         
         // Handle game mode restrictions
-        if (selectedLearningMaterial === 'number' || selectedLearningMaterial === 'words') {
+        if (selectedLearningMaterial === 'number') {
             // Force Timer Starts gamemode
             gamemodeindex = 0;
             updategamemodeimage();
             console.log(`⚠️ ${selectedLearningMaterial} only supports Timer Starts mode`);
-        }
-        
-        if (selectedLearningMaterial === 'words') {
-            console.log('Words model - skipping for now as requested');
-            return;
         }
         
         // Pre-load the model when creator selects it

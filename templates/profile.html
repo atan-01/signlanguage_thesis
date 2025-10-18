@@ -35,7 +35,7 @@
             <div class="profile_details">
                 <span>{{ user.username }}</span>
                 <div class="grade_joined">
-                    {{ ("Grade: " ~ user.grade) if user.grade else "Teacher" }} • Joined: {{ user.created_at }}
+                    {{ ("Grade: " ~ user.grade) if user.role == "Student" else "Teacher" }} • Joined: {{ user.created_at }}
                 </div>
             </div>
             <div class="search">

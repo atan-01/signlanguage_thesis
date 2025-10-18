@@ -1,4 +1,3 @@
-// Client-side RandomForest implementation with multi-model support
 class ClientSideASLClassifier {
     constructor() {
         this.currentModelType = null; // 'alphabet' or 'number'
@@ -46,7 +45,6 @@ class ClientSideASLClassifier {
                     this.customClassNames[index] = alphabetMapping[className];
                 });
             } else if (modelType === 'number') {
-                // For numbers, create proper mapping (model classes "0"-"9" to display "0"-"9")
                 const numberMapping = {
                     "0": "1", "1": "2", "2": "3", "3": "4",
                     "4": "5", "5": "6", "6": "7", "7": "8", "8": "9"

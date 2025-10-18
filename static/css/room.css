@@ -42,7 +42,7 @@ body, html {
     background-color: #FCB912;
     padding: 1% 4%;
     border-radius: 1vh;
-    display: flex; /* ensures key and code are aligned properly */
+    display: flex;
     justify-content: center;
     align-items: center;
     margin-left: 5%;
@@ -70,7 +70,7 @@ body, html {
 
 .btn_participants,
 .btn_leave {
-    height: 2.5vh; /* match key icon height */
+    height: 2.5vh;
     width: auto;
     cursor: pointer;
 }
@@ -220,7 +220,7 @@ body, html {
     color: white;
 }
 
-.btn.danger {
+.btn.danger { /* for camera */
     background-color: #f44336;
     color: white;
 }
@@ -498,7 +498,7 @@ body, html {
 
 .gamemode_container{
     display: grid;
-    grid-template-columns: auto 1fr auto; /* left - main - right */
+    grid-template-columns: auto 1fr auto;
     flex-direction: row;
     height: 25%;
     justify-content: center;
@@ -556,7 +556,7 @@ body, html {
 
 .select-container {
     display: flex;
-    gap: 1rem; /* space between the two dropdowns */
+    gap: 1rem;
     align-items: center;
 }
 
@@ -761,7 +761,6 @@ input[type="radio"] {
     font-weight: 500;
 }
 
-/* Ensure list items don't have default bullet points */
 #participantList {
     list-style: none;
     padding: 0;
@@ -787,7 +786,7 @@ input[type="radio"] {
     font-family: 'Gantari', sans-serif;
 }
 
-
+/* leaderboard */
 
 .leaderboard-overlay {
     position: fixed;
@@ -915,7 +914,6 @@ h2 {
     font-family: "Gantari", sans-serif;
 }
 
-/* Responsive design */
 @media (max-width: 1200px) {
     .room-container {
         flex-direction: column;
