@@ -23,18 +23,8 @@ def create_supabase_client_with_retry(url, key, max_retries=3):
         try:
             print(f"🔄 Attempting to connect to Supabase (attempt {attempt + 1}/{max_retries})...")
             
-            # Create client with custom options
-            client = create_client(
-                url, 
-                key,
-                options={
-                    'auto_refresh_token': True,
-                    'persist_session': True,
-                    'headers': {
-                        'Connection': 'keep-alive'
-                    }
-                }
-            )
+            # Simple client creation (no custom options - that was causing the error!)
+            client = create_client(url, key)
             
             # Test the connection with a simple query
             print("🧪 Testing Supabase connection...")
@@ -72,14 +62,18 @@ def create_app():
     if not supabase_url or not supabase_key:
         raise ValueError("❌ SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
     
+    # Initialize supabase variable BEFORE try block (fixes UnboundLocalError)
+    supabase = None
+    
     # Create Supabase client with retry logic
     try:
-        supabase: Client = create_supabase_client_with_retry(supabase_url, supabase_key)
+        supabase = create_supabase_client_with_retry(supabase_url, supabase_key)
         app.config['SUPABASE'] = supabase
     except Exception as e:
         print(f"🚨 CRITICAL: Failed to initialize Supabase: {e}")
-        # Don't raise - let app start but log the error
+        # Set to None so app can still start (but won't work properly)
         app.config['SUPABASE'] = None
+        supabase = None
     
     socketio = SocketIO(
         app, 
@@ -105,7 +99,7 @@ def create_app():
     else:
         print(f"⚠️ FSL predictor NOT attached to app")
 
-    # Initialize SocketIO events
+    # Initialize SocketIO events (now supabase is always defined)
     init_all_socketio_events(socketio, supabase, detector)
     
     print("✅ App created successfully")
@@ -149,10 +143,11 @@ app, socketio = create_app()
 
 # ============================================
 # 🏠 For local development only
+# Railway/Gunicorn will NOT execute this block
 # ============================================
 if __name__ == '__main__':
     print("=" * 50)
-    print("🚀 Starting Sign Language Detection Server (DEV MODE)")
+    print("🚀 Starting Sign Language Detection Server (LOCAL DEV)")
     print("=" * 50)
     
     port = int(os.getenv('PORT', 5000))
