@@ -16,7 +16,7 @@ load_dotenv()
 
 def create_app():
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-this-in-production')
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', '08ca468790472700391c35315b83d61b49b3f832b9d928659ae5ec5ba6a7cc61')
     
     supabase_url = os.getenv('SUPABASE_URL')
     supabase_key = os.getenv('SUPABASE_KEY')
@@ -86,6 +86,8 @@ def initialize_fsl_model(app):
 
 if __name__ == '__main__':
     print("Starting Sign Language Detection Server")
+    port = int(os.getenv('PORT', 5000))
     app, socketio = create_app()
+
     print("Server ready! Open http://localhost:5000")
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+    socketio.run(app, debug=False, host='0.0.0.0', port=port)
