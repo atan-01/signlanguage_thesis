@@ -1,3 +1,8 @@
+# ⚠️ CRITICAL: Must be FIRST - Before any other imports!
+# This prevents Eventlet from breaking DNS resolution
+import eventlet
+eventlet.monkey_patch(os=True, select=True, socket=True, thread=True, time=True, dns=False)
+
 from flask import Flask, jsonify
 from flask_socketio import SocketIO
 from dotenv import load_dotenv
@@ -30,15 +35,22 @@ def create_app():
     if not supabase_url or not supabase_key:
         raise ValueError("❌ SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
     
-    # ✅ CREATE CLIENT WITHOUT TESTING - Let it fail on first actual use
-    print("📦 Creating Supabase client (deferred connection test)...")
+    # Create Supabase client
+    print("📦 Creating Supabase client with DNS fix...")
     supabase = None
     try:
         supabase = create_client(supabase_url, supabase_key)
         app.config['SUPABASE'] = supabase
         print("✅ Supabase client created successfully")
+        
+        # Test connection immediately
+        print("🧪 Testing Supabase connection...")
+        test_result = supabase.table('users').select('id').limit(1).execute()
+        print("✅ Supabase connection test PASSED!")
+        
     except Exception as e:
-        print(f"❌ Failed to create Supabase client: {e}")
+        print(f"❌ Supabase initialization failed: {e}")
+        print(f"❌ Error type: {type(e).__name__}")
         app.config['SUPABASE'] = None
     
     socketio = SocketIO(
@@ -69,7 +81,7 @@ def create_app():
     init_all_socketio_events(socketio, supabase, detector)
     
     # ============================================
-    # 🏥 HEALTH CHECK ENDPOINT (INSIDE create_app)
+    # 🏥 HEALTH CHECK ENDPOINT
     # ============================================
     @app.route('/health')
     def health_check():
@@ -86,7 +98,7 @@ def create_app():
                     "message": "Supabase client not initialized"
                 }), 500
             
-            # Try a simple query with explicit timeout
+            # Try a simple query
             result = supabase_client.table('users').select('id').limit(1).execute()
             query_time = time.time() - start_time
             
@@ -95,7 +107,7 @@ def create_app():
                 "supabase": "connected",
                 "test_query": "success",
                 "query_time_ms": round(query_time * 1000, 2),
-                "url": supabase_url[:30] + "..."
+                "dns_fix": "eventlet monkey_patch with dns=False"
             })
         except Exception as e:
             query_time = time.time() - start_time
