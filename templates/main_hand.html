@@ -108,7 +108,7 @@
         });
 
         document.getElementById("logoutBtn").addEventListener("click", function() {
-            window.location.href = this.dataset.href;
+            window.location.href = `${window.location.origin}${this.dataset.href}`;
         });
     </script>
 </body>

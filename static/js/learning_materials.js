@@ -424,7 +424,7 @@ function back() {
     if (isWordsCategory) {
         stopFSLMotionCapture();
     }
-    window.location.href = '/learn/';
+    window.location.href = `${window.location.origin}/learn/`;
 }
 
 function initializeItems() {

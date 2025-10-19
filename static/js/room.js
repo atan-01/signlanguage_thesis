@@ -269,7 +269,7 @@ function setupRoomSocketHandlers() {
             <div class="notif-leave">
                 <h3>🚪 Room Closed</h3>
                 <p>${data.message}</p>
-                <button onclick="this.parentElement.parentElement.remove(); window.location.href='/home/';" 
+                <button onclick="this.parentElement.parentElement.remove(); window.location.href = '${window.location.origin}/home/';" 
                         style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
                     OK
                 </button>
@@ -283,7 +283,7 @@ function setupRoomSocketHandlers() {
         document.body.appendChild(notification);
         
         setTimeout(() => {
-            window.location.href = '/home/';
+            window.location.href = `${window.location.origin}/home/`;
         }, 5000);
     });
 }
@@ -586,16 +586,16 @@ function exitroom() {
         socketio.emit('room_creator_leaving');
         
         setTimeout(() => {
-            if (detector) {
-                detector.stopCamera();
-            }
-            try {
-                socketio.disconnect();
-                window.location.href = '/home/';
-            } catch (error) {
-                console.error('Error during disconnect:', error);
-                window.location.href = '/home/';
-            }
+        if (detector) {
+            detector.stopCamera();
+        }
+        try {
+            socketio.disconnect();
+            window.location.href = `${window.location.origin}/home/`;
+        } catch (error) {
+            console.error('Error during disconnect:', error);
+            window.location.href = `${window.location.origin}/home/`;
+        }
         }, 100);
     } else {
         if (detector) {
@@ -603,10 +603,10 @@ function exitroom() {
         }
         try {
             socketio.disconnect();
-            window.location.href = '/home/';
+            window.location.href = `${window.location.origin}/home/`;
         } catch (error) {
             console.error('Error during disconnect:', error);
-            window.location.href = '/home/';
+            window.location.href = `${window.location.origin}/home/`;
         }
     }
 }

@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         try {
-        const response = await fetch(`/profile/${username}`);
+        const response = await fetch(`${window.location.origin}/profile/${username}`)
         const text = await response.text();
 
         if (text.trim() === "User not found") {
@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
-        window.location.href = `/profile/${username}`;
+        window.location.href = `${window.location.origin}/profile/${username}`;
         } catch (error) {
         alert("⚠️ Something went wrong while searching.");
         }
@@ -163,11 +163,11 @@ function setupChartDropdown() {
 }
 
 function profile(username) {
-    window.location.href = `/profile/${username}`;
+    window.location.href = `${window.location.origin}/profile/${username}`;
 }
 
-document.getElementById("logoutBtn").addEventListener("click", function() {
-    window.location.href = this.dataset.href;
+document.getElementById("logoutBtn").addEventListener("click", function () {
+    window.location.href = `${window.location.origin}${this.dataset.href}`;
 });
 
 let scoreChart;

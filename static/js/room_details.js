@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 function profile(username) {
-    window.location.href = `/profile/${username}`;
+    window.location.href = `${window.location.origin}/profile/${username}`;
 }
 
-document.getElementById("logoutBtn").addEventListener("click", function() {
-    window.location.href = this.dataset.href;
+document.getElementById("logoutBtn").addEventListener("click", function () {
+    window.location.href = `${window.location.origin}${this.dataset.href}`;
 });

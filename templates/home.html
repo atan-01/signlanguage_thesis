@@ -65,22 +65,23 @@
         });
 
         function profile(username) {
-            window.location.href = `/profile/${username}`;
+            window.location.href = `${window.location.origin}/profile/${username}`;
         }
 
         document.getElementById("logoutBtn").addEventListener("click", function() {
-            window.location.href = this.dataset.href;
+            window.location.href = `${window.location.origin}${this.dataset.href}`;
         });
+
         function practicebtn() {
-            window.location.href = '/main/';
+            window.location.href = `${window.location.origin}/main/`;
         }
 
         function learnasl() {
-            window.location.href = '/learn/';
+            window.location.href = `${window.location.origin}/learn/`;
         }
 
         function userprofile(username) {
-            window.location.href = `/profile/${username}`;
+            window.location.href = `${window.location.origin}/profile/${username}`;
         }
     </script>
 </body>

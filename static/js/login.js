@@ -82,7 +82,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     };
 
     try {
-        const response = await fetch('/login', {        // uses ajax - submits form without refreshing, /login route in app.py
+        const response = await fetch(`${window.location.origin}/login`, {      // uses ajax - submits form without refreshing, /login route in app.py
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -95,7 +95,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         if (response.ok) {                                      //  Checks if the HTTP response was successful (status 200–299).
             showSuccess('Login successful! Redirecting...');
             setTimeout(() => {
-                window.location.href = result.redirect;
+                window.location.href = `${window.location.origin}${result.redirect}`;
             }, 1000);
         } else {
             showError(result.error || 'Login failed');
@@ -132,7 +132,7 @@ document.getElementById('registerForm').addEventListener('submit', async functio
     };
 
     try {
-        const response = await fetch('/register', {
+        const response = await fetch(`${window.location.origin}/register`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -145,7 +145,7 @@ document.getElementById('registerForm').addEventListener('submit', async functio
         if (response.ok) {
             showSuccess('Registration successful! Redirecting...');
             setTimeout(() => {
-                window.location.href = result.redirect;
+                window.location.href = `${window.location.origin}${result.redirect}`;
             }, 1000);
         } else {
             showError(result.error || 'Registration failed');
