@@ -20,6 +20,15 @@ def create_app():
     
     supabase_url = os.getenv('SUPABASE_URL')
     supabase_key = os.getenv('SUPABASE_KEY')
+
+    print(f"DEBUG: SUPABASE_URL exists: {bool(supabase_url)}")
+    print(f"DEBUG: SUPABASE_KEY exists: {bool(supabase_key)}")
+    if supabase_url:
+        print(f"DEBUG: URL starts with: {supabase_url[:30]}...")
+    
+    if not supabase_url or not supabase_key:
+        raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set")
+
     
     if not supabase_url or not supabase_key:
         raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in .env file")
