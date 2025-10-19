@@ -84,10 +84,11 @@ def initialize_fsl_model(app):
         app.fsl_predictor = None
         return False
 
+app, socketio = create_app()
+
 if __name__ == '__main__':
     print("Starting Sign Language Detection Server")
     port = int(os.getenv('PORT', 5000))
-    app, socketio = create_app()
 
     print("Server ready! Open http://localhost:5000")
     socketio.run(app, debug=False, host='0.0.0.0', port=port)
