@@ -11,7 +11,7 @@ def create_user(username, password, role, profile_picture, grade):
     
     try:
         result = supabase.table('users').insert({
-            'username': username,
+            'username': username.lower(),
             'password_hash': password_hash,
             'role': role,
             'profile_picture': profile_picture,
@@ -25,10 +25,10 @@ def create_user(username, password, role, profile_picture, grade):
         return None
 
 def get_user_by_username(username):
-    """Get user by username from Supabase"""
+    """Get user by username from Supabase (case-insensitive)"""
     supabase = current_app.config['SUPABASE']
     try:
-        result = supabase.table('users').select('*').eq('username', username).execute()
+        result = supabase.table('users').select('*').eq('username', username.lower()).execute()
         return result.data[0] if result.data else None
     except Exception as e:
         print(f"Error getting user: {e}")
