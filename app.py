@@ -1,8 +1,3 @@
-# ⚠️ CRITICAL: Must be FIRST - Before any other imports!
-# This prevents Eventlet from breaking DNS resolution
-import eventlet
-eventlet.monkey_patch(os=True, select=True, socket=True, thread=True, time=True, dns=False)
-
 from flask import Flask, jsonify
 from flask_socketio import SocketIO
 from dotenv import load_dotenv
@@ -36,14 +31,14 @@ def create_app():
         raise ValueError("❌ SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
     
     # Create Supabase client
-    print("📦 Creating Supabase client with DNS fix...")
+    print("📦 Creating Supabase client (using gevent)...")
     supabase = None
     try:
         supabase = create_client(supabase_url, supabase_key)
         app.config['SUPABASE'] = supabase
         print("✅ Supabase client created successfully")
         
-        # Test connection immediately
+        # Test connection
         print("🧪 Testing Supabase connection...")
         test_result = supabase.table('users').select('id').limit(1).execute()
         print("✅ Supabase connection test PASSED!")
@@ -51,12 +46,15 @@ def create_app():
     except Exception as e:
         print(f"❌ Supabase initialization failed: {e}")
         print(f"❌ Error type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
         app.config['SUPABASE'] = None
     
+    # Use gevent instead of eventlet
     socketio = SocketIO(
         app, 
         cors_allowed_origins="*",
-        async_mode='eventlet',
+        async_mode='gevent',  # Changed from 'eventlet'
         ping_timeout=60,
         ping_interval=25
     )
@@ -107,7 +105,7 @@ def create_app():
                 "supabase": "connected",
                 "test_query": "success",
                 "query_time_ms": round(query_time * 1000, 2),
-                "dns_fix": "eventlet monkey_patch with dns=False"
+                "worker": "gevent"
             })
         except Exception as e:
             query_time = time.time() - start_time
