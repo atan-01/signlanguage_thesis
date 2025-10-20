@@ -555,7 +555,28 @@ class SignLanguageDetector {
                 }
             }
         }
+        else if (this.gameMode === 'above_below') {
+            // Above or Below game logic
+            if (prediction === this.aboveBelowData.target && confidencePercent >= 50) {
+                this.holdCounter += 1;
+            } else {
+                this.holdCounter = 0;
+            }
+
+            if (this.holdCounter >= 4) {
+                this.score += 10;
+                this.holdCounter = 0;
+                
+                this.aboveBelowData = this.generateAboveBelowTarget();
+                this.updateGameUI();
+
+                if (this.config.isRoomMode && this.socketio) {
+                    this.socketio.emit('score_update', { score: this.score });
+                }
+            }
+        }
     }
+
 
     handleLearningLogic(prediction, confidencePercent) {
         if (!this.learningTarget) {
@@ -646,6 +667,9 @@ class SignLanguageDetector {
         } 
         else if (this.gameMode === 'fill_blanks') {
             this.selectRandomWordWithBlank();
+        }
+        else if (this.gameMode === 'above_below') {
+            this.aboveBelowData = this.generateAboveBelowTarget();
         }
         
         this.updateGameUI();
@@ -742,13 +766,30 @@ class SignLanguageDetector {
                 this.elements.scoreElement.textContent = `Score ${this.score}`;
             }
             if (this.elements.targetElement) {
-                // Display: emoji + word with blank
                 this.elements.targetElement.innerHTML = `
                     <div style="display: flex; justify-content: center; align-items: center;">
                         <div style="font-size: 1.5rem; margin-bottom: 10px; margin-right: 1rem">${this.currentWord.emoji}</div>
                         <div style="font-size: 1rem; letter-spacing: 0.5rem; font-weight: bold;">${this.wordDisplay.toUpperCase()}</div>
                     </div>
                 `;
+            }
+        }
+        else if (this.gameMode === 'above_below') {
+            // Above or Below UI update
+            if (this.elements.scoreElement) {
+                this.elements.scoreElement.textContent = `Score ${this.score}`;
+            }
+            if (this.elements.targetElement) {
+                const arrows = this.aboveBelowData.direction === 'up' ? ' → ' : ' ← ';
+                const arrowString = arrows.repeat(this.aboveBelowData.steps);
+                
+                // For left arrows (down), put arrows before the letter
+                if (this.aboveBelowData.direction === 'down') {
+                    this.elements.targetElement.textContent = `${arrowString} ${this.aboveBelowData.base}`;
+                } else {
+                    // For right arrows (up), put arrows after the letter
+                    this.elements.targetElement.textContent = `${this.aboveBelowData.base} ${arrowString}`;
+                }
             }
         }
     }
@@ -808,6 +849,13 @@ class SignLanguageDetector {
             if (!this.words || !this.words.words) {
                 console.log('Loading words for Fill in the Blanks...');
                 await this.loadWords();
+            }
+        }
+        else if (mode === 'above_below') {
+            console.log('Setting up Above or Below mode...');
+            // Initialize the above/below data structure if needed
+            if (this.config.enableGameLogic) {
+                this.aboveBelowData = this.generateAboveBelowTarget();
             }
         }
         
@@ -968,5 +1016,42 @@ class SignLanguageDetector {
         } catch (error) {
             console.error('Error processing MediaPipe results:', error);
         }
+    }
+
+    // above or below game
+
+    generateAboveBelowTarget() {
+        // Get current classes based on model type
+        const classes = this.asl_classes;
+        const maxIndex = classes.length - 1;
+        
+        // Select a base letter/number that allows for movement
+        let baseIndex;
+        let direction;
+        let steps;
+        
+        // Keep trying until we find a valid combination
+        do {
+            baseIndex = Math.floor(Math.random() * classes.length);
+            direction = Math.random() < 0.5 ? 'up' : 'down'; // up = right arrows, down = left arrows
+
+            const maxSteps = this.asl_classes.includes('1') ? 5 : 3;
+            steps = Math.floor(Math.random() * maxSteps) + 1;
+            
+            // Check if target would be valid
+            const targetIndex = direction === 'up' ? baseIndex + steps : baseIndex - steps;
+            
+            // Valid if target is within bounds
+            if (targetIndex >= 0 && targetIndex <= maxIndex) {
+                break;
+            }
+        } while (true);
+        
+        return {
+            base: classes[baseIndex],
+            direction: direction,
+            steps: steps,
+            target: classes[direction === 'up' ? baseIndex + steps : baseIndex - steps]
+        };
     }
 }

@@ -21,10 +21,10 @@ let motionFrameInterval = null;
 const gamemodeimages = [
     '/static/images/gm_timestarts.png',
     '/static/images/gm_fillintheblanks.png', 
-    '/static/images/gm_ghostsign.png'
+    '/static/images/gm_aboveorbelow.png'
 ];
 
-const gamemodenames = ['Timer Starts', 'Fill in the Blanks', 'Ghost Sign'];
+const gamemodenames = ['Timer Starts', 'Fill in the Blanks', 'Above or Below'];
 
 window.addEventListener('DOMContentLoaded', () => {    
     if (window.isRoomCreator) {
@@ -139,10 +139,24 @@ function setupRoomSocketHandlers() {
                     console.log('Participant using alphabet as target classes');
                 }
                 
-                if (detector.config.enableGameLogic && detector.gameMode === 'time_starts') {
-                    detector.targetletter = detector.asl_classes[Math.floor(Math.random() * detector.asl_classes.length)];
+                if (detector.config.enableGameLogic) {
+                    // Initialize based on game mode
+                    const gameModeMap = {
+                        'Timer Starts': 'time_starts',
+                        'Fill in the Blanks': 'fill_blanks',
+                        'Above or Below': 'above_below'
+                    };
+                    
+                    const gameMode = gameModeMap[data.type];
+                    
+                    if (gameMode === 'time_starts') {
+                        detector.targetletter = detector.asl_classes[Math.floor(Math.random() * detector.asl_classes.length)];
+                    } else if (gameMode === 'above_below') {
+                        detector.aboveBelowData = detector.generateAboveBelowTarget();
+                    }
+                    
                     detector.updateGameUI();
-                    console.log(`Initial target set to: ${detector.targetletter}`);
+                    console.log(`Initial target set for ${gameMode}`);
                 }
                 
             } else {
@@ -155,7 +169,7 @@ function setupRoomSocketHandlers() {
         const gameModeMap = {
             'Timer Starts': 'time_starts',
             'Fill in the Blanks': 'fill_blanks',
-            'Ghost Sign': 'ghost_sign'
+            'Above or Below': 'above_below'
         };
         
         if (detector && gameModeMap[data.type]) {
@@ -387,10 +401,13 @@ function handleConfirmButton() {
     
     // check learning material & game mode compatibility
     const selectedGameType = modenamediv.textContent;
-    const isTimerStarts = selectedGameType === 'Timer Starts' || gamemodeindex === 0;
+    const isTimerStartsOrAboveBelow = selectedGameType === 'Timer Starts' || 
+                                       selectedGameType === 'Above or Below' || 
+                                       gamemodeindex === 0 || 
+                                       gamemodeindex === 2;
     
-    if ((selectedLearningMaterial === 'number') && !isTimerStarts) {
-        alert(` ERROR: ${selectedLearningMaterial.charAt(0).toUpperCase() + selectedLearningMaterial.slice(1)} only supports "Timer Starts" game mode!\n\nPlease select "Timer Starts" before confirming.`);
+    if ((selectedLearningMaterial === 'number') && !isTimerStartsOrAboveBelow) {
+        alert(`ERROR: ${selectedLearningMaterial.charAt(0).toUpperCase() + selectedLearningMaterial.slice(1)} only supports "Timer Starts" and "Above or Below" game modes!\n\nPlease select one of these modes before confirming.`);
         return false;
     }
     

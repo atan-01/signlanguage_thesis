@@ -122,7 +122,7 @@ function createChartElements() {
         <div class="dropdown-list" id="chartDropdownList">
             <a href="#" data-filter="all">All</a>
             <a href="#" data-filter="Timer Starts">Timer Starts</a>
-            <a href="#" data-filter="Falling Letters">Falling Letters</a>
+            <a href="#" data-filter="Above or Below">Above or Below</a>
             <a href="#" data-filter="Fill in the Blanks">Fill in the Blanks</a>
         </div>
     `;
