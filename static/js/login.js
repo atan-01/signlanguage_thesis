@@ -167,7 +167,7 @@ function openAvatarModal() {
     const avatarGrid = document.getElementById("avatarGrid");
     avatarGrid.innerHTML = "";
 
-    const avatars = ["darwin.png", "kirby.png", "roblox_guy.png", "roblox_girl.png", "default.jpg"];
+    const avatars = ["alex.jpg", "baymax.jpg", "bmo.jpg", "cookie.jpg", "darwin.png", "kirby.png", "roblox_guy.png", "roblox_girl.png", "default.jpg", "dragonball.jpg", "elmo.jpg", "gudetama.jpg", "pig.jpg", "pikachu.jpg", "red.jpg", "steve.jpg", "toot.jpg", "totoro.jpg"];
 
     avatars.forEach(img => {
         const imgElement = document.createElement("img");
