@@ -51,10 +51,9 @@ def profile(username):
     if not requested_user:
         return "User not found", 404
 
-    # Use the REQUESTED user's ID for all queries
     user_id = requested_user['id']
 
-    # Get game sessions where the REQUESTED user participated
+    # Get game sessions
     user_game_sessions = supabase.table("game_sessions") \
         .select("*") \
         .eq("user_id", user_id) \
@@ -62,7 +61,7 @@ def profile(username):
         .limit(10) \
         .execute().data
     
-    # Get rooms created by the REQUESTED user (last 10)
+    # Get rooms created by the user
     created_rooms = supabase.table("rooms") \
         .select("*") \
         .eq("creator_id", user_id) \
@@ -70,7 +69,7 @@ def profile(username):
         .limit(10) \
         .execute().data
 
-    # Combine room IDs from both game sessions and created rooms
+    # Combine room IDs
     session_room_ids = [s["room_id"] for s in user_game_sessions]
     created_room_ids = [r["id"] for r in created_rooms]
     all_room_ids = list(set(session_room_ids + created_room_ids))
@@ -82,49 +81,48 @@ def profile(username):
         
     rooms_by_id = {r["id"]: r for r in user_rooms_history}
 
-    # Process game sessions (add room data and format dates)
+    # Process game sessions
     for s in user_game_sessions:
         s["room"] = rooms_by_id.get(s["room_id"])
-        s["created_at"] = format_created_at(s["created_at"])
+        # ✅ KEEP BOTH: raw timestamp for sorting, formatted for display
+        s["created_at_raw"] = s["created_at"]  # Keep original timestamp
+        s["created_at"] = format_created_at(s["created_at"])  # Format for display
         s["is_creator"] = False
         s["learning_material"] = s["room"]["learning_material"] if s["room"] else None
 
-
-    # Create fake game sessions for created rooms (where user was creator but didn't participate)
+    # Create sessions for created rooms
     created_room_sessions = []
     for room in created_rooms:
-        # Check if this room already has a game session entry
         if room["id"] not in session_room_ids:
             created_room_sessions.append({
                 "room_id": room["id"],
                 "room": room,
-                "score": None,  # No score for creator who didn't participate
-                "created_at": format_created_at(room["created_at"]),
+                "score": None,
+                "created_at_raw": room["created_at"],  # Keep original
+                "created_at": format_created_at(room["created_at"]),  # Format for display
                 "is_creator": True,
                 "learning_material": room.get("learning_material")
             })
 
-    # Combine and sort all sessions by date (most recent first)
+    # Combine and sort by RAW timestamp
     all_sessions = user_game_sessions + created_room_sessions
-    all_sessions.sort(key=lambda x: datetime.strptime(x["created_at"], "%B %d, %Y"), reverse=True)
+    all_sessions.sort(key=lambda x: x["created_at_raw"], reverse=True)
     
-    # Take only the 10 most recent
     all_sessions = all_sessions[:10]
 
-    # Calculate stats (only from actual game sessions with scores)
+    # Calculate stats
     scores = [s["score"] for s in user_game_sessions if "score" in s and s["score"] is not None]
     avg_score = round(sum(scores) / len(scores), 2) if scores else 0
     best_score = max(scores) if scores else 0
     
-    # Total games includes both participated and created
     total_games_participated = len(user_game_sessions)
     total_games_created = len(created_room_sessions)
     total_games = total_games_participated + total_games_created
 
     return render_template(
         "profile.html",
-        user=requested_user,  # Profile being viewed
-        logged_in_user=logged_in_user,  # User who is logged in (for navbar)
+        user=requested_user,
+        logged_in_user=logged_in_user,
         user_game_sessions=all_sessions,
         user_rooms_history=user_rooms_history,
         avg_score=avg_score,

@@ -232,7 +232,11 @@ function createChart(ctx, filter) {
         filteredData = gameSessionsData.filter(game => !game.is_creator);
     }
     
-    filteredData.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    filteredData.sort((a, b) => {
+        const dateA = new Date(a.created_at_raw);
+        const dateB = new Date(b.created_at_raw);
+        return dateA - dateB;
+    });
     
     const labels = filteredData.map((game, index) => `Game ${index + 1}`);
     const scores = filteredData.map(game => game.score);
@@ -324,7 +328,11 @@ function updateChart(filter) {
         );
     }
     
-    filteredData.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    filteredData.sort((a, b) => {
+        const dateA = new Date(a.created_at_raw);
+        const dateB = new Date(b.created_at_raw);
+        return dateA - dateB;
+    });
     
     const labels = filteredData.map((game, index) => `Game ${index + 1}`);
     const scores = filteredData.map(game => game.score);

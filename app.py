@@ -21,31 +21,25 @@ def create_app():
     supabase_url = os.getenv('SUPABASE_URL')
     supabase_key = os.getenv('SUPABASE_KEY')
     
-    # DEBUG: Print environment variables
-    print(f"🔍 DEBUG: SUPABASE_URL exists: {bool(supabase_url)}")
-    print(f"🔍 DEBUG: SUPABASE_KEY exists: {bool(supabase_key)}")
-    if supabase_url:
-        print(f"🔍 DEBUG: Full URL: {supabase_url}")
-    
     if not supabase_url or not supabase_key:
-        raise ValueError("❌ SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
+        raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
     
     # Create Supabase client
-    print("📦 Creating Supabase client (using gevent)...")
+    print("Creating Supabase client (using gevent)...")
     supabase = None
     try:
         supabase = create_client(supabase_url, supabase_key)
         app.config['SUPABASE'] = supabase
-        print("✅ Supabase client created successfully")
+        print("Supabase client created successfully")
         
         # Test connection
-        print("🧪 Testing Supabase connection...")
+        print("Testing Supabase connection...")
         test_result = supabase.table('users').select('id').limit(1).execute()
-        print("✅ Supabase connection test PASSED!")
+        print("Supabase connection test PASSED!")
         
     except Exception as e:
-        print(f"❌ Supabase initialization failed: {e}")
-        print(f"❌ Error type: {type(e).__name__}")
+        print(f"Supabase initialization failed: {e}")
+        print(f"Error type: {type(e).__name__}")
         import traceback
         traceback.print_exc()
         app.config['SUPABASE'] = None
@@ -69,17 +63,11 @@ def create_app():
     
     initialize_fsl_model(app)
     
-    # Verify FSL model
-    if hasattr(app, 'fsl_predictor') and app.fsl_predictor is not None:
-        print(f"✅ FSL predictor attached to app successfully")
-    else:
-        print(f"⚠️ FSL predictor NOT attached to app")
-
     # Initialize SocketIO events
     init_all_socketio_events(socketio, supabase, detector)
     
     # ============================================
-    # 🏥 HEALTH CHECK ENDPOINT
+    # HEALTH CHECK ENDPOINT
     # ============================================
     @app.route('/health')
     def health_check():
@@ -117,7 +105,7 @@ def create_app():
                 "query_time_ms": round(query_time * 1000, 2)
             }), 500
     
-    print("✅ App created successfully - ready to accept connections")
+    print("App created successfully - ready to accept connections")
     return app, socketio
 
 def initialize_fsl_model(app):
@@ -140,22 +128,10 @@ def initialize_fsl_model(app):
         app.fsl_predictor = None
         return False
 
-
-# ============================================
-# 🚀 Create app instance for Gunicorn
-# ============================================
 app, socketio = create_app()
 
-
-# ============================================
-# 🏠 For local development only
-# ============================================
 if __name__ == '__main__':
-    print("=" * 50)
-    print("🚀 LOCAL DEV MODE")
-    print("=" * 50)
-    
     port = int(os.getenv('PORT', 5000))
-    print(f"✅ Server ready at http://localhost:{port}")
+    print(f"Server ready at http://localhost:{port}")
     
     socketio.run(app, debug=True, host='0.0.0.0', port=port)
