@@ -131,3 +131,7 @@ function showModelSwitchNotification(modelType) {
 function profile(username) {
     window.location.href = `${window.location.origin}/profile/${username}`;
 }
+
+function dashboard() {
+    window.location.href = `${window.location.origin}/admin/dashboard`;
+}

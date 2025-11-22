@@ -1,108 +1,420 @@
 {
   "words": [
-    {"word":"aso","emoji":"🐶"},
-    {"word":"pusa","emoji":"🐱"},
-    {"word":"ibon","emoji":"🐦"},
-    {"word":"isda","emoji":"🐟"},
-    {"word":"manok","emoji":"🐔"},
-    {"word":"baka","emoji":"🐄"},
-    {"word":"baboy","emoji":"🐖"},
-    {"word":"saging","emoji":"🍌"},
-    {"word":"mangga","emoji":"🥭"},
-    {"word":"mansanas","emoji":"🍎"},
-    {"word":"tinapay","emoji":"🍞"},
-    {"word":"kanin","emoji":"🍚"},
-    {"word":"gatas","emoji":"🥛"},
-    {"word":"kutsara","emoji":"🥄"},
-    {"word":"kutsilyo","emoji":"🔪"},
-    {"word":"pinggan","emoji":"🍽️"},
-    {"word":"baso","emoji":"🥤"},
-    {"word":"mesa","emoji":"🪑"},
-    {"word":"silya","emoji":"💺"},
-    {"word":"bahay","emoji":"🏠"},
-    {"word":"pintuan","emoji":"🚪"},
-    {"word":"bintana","emoji":"🪟"},
-    {"word":"kandila","emoji":"🕯️"},
-    {"word":"ilaw","emoji":"💡"},
-    {"word":"kotse","emoji":"🚗"},
-    {"word":"bisikleta","emoji":"🚲"},
-    {"word":"bus","emoji":"🚌"},
-    {"word":"tren","emoji":"🚆"},
-    {"word":"eroplano","emoji":"✈️"},
-    {"word":"bangka","emoji":"🛶"},
-    {"word":"dagat","emoji":"🌊"},
-    {"word":"ilog","emoji":"🏞️"},
-    {"word":"bundok","emoji":"⛰️"},
-    {"word":"gubat","emoji":"🌳"},
-    {"word":"parke","emoji":"🏞️"},
-    {"word":"paaralan","emoji":"🏫"},
-    {"word":"guro","emoji":"👩‍🏫"},
-    {"word":"estudyante","emoji":"🎒"},
-    {"word":"aklat","emoji":"📚"},
-    {"word":"lapis","emoji":"✏️"},
-    {"word":"papel","emoji":"📄"},
-    {"word":"telepono","emoji":"📱"},
-    {"word":"telebisyon","emoji":"📺"},
-    {"word":"kompyuter","emoji":"💻"},
-    {"word":"orasan","emoji":"⏰"},
-    {"word":"araw","emoji":"☀️"},
-    {"word":"gabi","emoji":"🌙"},
-    {"word":"buwan","emoji":"🌕"},
-    {"word":"bituin","emoji":"⭐"},
-    {"word":"ulan","emoji":"🌧️"},
-    {"word":"hangin","emoji":"🌬️"},
-    {"word":"apoy","emoji":"🔥"},
-    {"word":"tubig","emoji":"💧"},
-    {"word":"sapatos","emoji":"👟"},
-    {"word":"damit","emoji":"👕"},
-    {"word":"payong","emoji":"☂️"},
-    {"word":"bag","emoji":"👜"},
-    {"word":"laruan","emoji":"🧸"},
-    {"word":"bola","emoji":"⚽"},
-    {"word":"laro","emoji":"🎮"},
-    {"word":"takbo","emoji":"🏃"},
-    {"word":"luto","emoji":"🍳"},
-    {"word":"kain","emoji":"🍽️"},
-    {"word":"inom","emoji":"🥤"},
-    {"word":"ligo","emoji":"🚿"},
-    {"word":"tulog","emoji":"😴"},
-    {"word":"gising","emoji":"🌅"},
-    {"word":"ngiti","emoji":"😊"},
-    {"word":"iyak","emoji":"😢"},
-    {"word":"halakhak","emoji":"😂"},
-    {"word":"sulat","emoji":"📝"},
-    {"word":"basa","emoji":"📖"},
-    {"word":"musika","emoji":"🎵"},
-    {"word":"sayaw","emoji":"💃"},
-    {"word":"kanta","emoji":"🎤"},
-    {"word":"gitara","emoji":"🎸"},
-    {"word":"tambol","emoji":"🥁"},
-    {"word":"telepono","emoji":"☎️"},
-    {"word":"radyo","emoji":"📻"},
-    {"word":"palengke","emoji":"🏬"},
-    {"word":"simbahan","emoji":"⛪"},
-    {"word":"ospital","emoji":"🏥"},
-    {"word":"police","emoji":"🚓"},
-    {"word":"pulis","emoji":"👮‍♂️"},
-    {"word":"bumbero","emoji":"🚒"},
-    {"word":"doktor","emoji":"🩺"},
-    {"word":"nars","emoji":"👩‍⚕️"},
-    {"word":"magsasaka","emoji":"🌾"},
-    {"word":"mangingisda","emoji":"🎣"},
-    {"word":"kapitbahay","emoji":"🏘️"},
-    {"word":"kaibigan","emoji":"🧑‍🤝‍🧑"},
-    {"word":"kapatid","emoji":"👫"},
-    {"word":"lolo","emoji":"👴"},
-    {"word":"lola","emoji":"👵"},
-    {"word":"apo","emoji":"👶"},
-    {"word":"kusina","emoji":"🍳"},
-    {"word":"paligo","emoji":"🛁"},
-    {"word":"banyo","emoji":"🚽"},
-    {"word":"puso","emoji":"❤️"},
-    {"word":"mata","emoji":"👀"},
-    {"word":"ilong","emoji":"👃"},
-    {"word":"tainga","emoji":"👂"},
-    {"word":"bibig","emoji":"👄"},
-    {"word":"kamay","emoji":"✋"}
+    {
+      "word": "aso",
+      "emoji": "🐶"
+    },
+    {
+      "word": "pusa",
+      "emoji": "🐱"
+    },
+    {
+      "word": "ibon",
+      "emoji": "🐦"
+    },
+    {
+      "word": "isda",
+      "emoji": "🐟"
+    },
+    {
+      "word": "manok",
+      "emoji": "🐔"
+    },
+    {
+      "word": "baka",
+      "emoji": "🐄"
+    },
+    {
+      "word": "baboy",
+      "emoji": "🐖"
+    },
+    {
+      "word": "saging",
+      "emoji": "🍌"
+    },
+    {
+      "word": "mangga",
+      "emoji": "🥭"
+    },
+    {
+      "word": "mansanas",
+      "emoji": "🍎"
+    },
+    {
+      "word": "tinapay",
+      "emoji": "🍞"
+    },
+    {
+      "word": "kanin",
+      "emoji": "🍚"
+    },
+    {
+      "word": "gatas",
+      "emoji": "🥛"
+    },
+    {
+      "word": "kutsara",
+      "emoji": "🥄"
+    },
+    {
+      "word": "kutsilyo",
+      "emoji": "🔪"
+    },
+    {
+      "word": "pinggan",
+      "emoji": "🍽️"
+    },
+    {
+      "word": "baso",
+      "emoji": "🥤"
+    },
+    {
+      "word": "mesa",
+      "emoji": "🪑"
+    },
+    {
+      "word": "silya",
+      "emoji": "💺"
+    },
+    {
+      "word": "bahay",
+      "emoji": "🏠"
+    },
+    {
+      "word": "pintuan",
+      "emoji": "🚪"
+    },
+    {
+      "word": "bintana",
+      "emoji": "🪟"
+    },
+    {
+      "word": "kandila",
+      "emoji": "🕯️"
+    },
+    {
+      "word": "ilaw",
+      "emoji": "💡"
+    },
+    {
+      "word": "kotse",
+      "emoji": "🚗"
+    },
+    {
+      "word": "bisikleta",
+      "emoji": "🚲"
+    },
+    {
+      "word": "bus",
+      "emoji": "🚌"
+    },
+    {
+      "word": "tren",
+      "emoji": "🚆"
+    },
+    {
+      "word": "eroplano",
+      "emoji": "✈️"
+    },
+    {
+      "word": "bangka",
+      "emoji": "🛶"
+    },
+    {
+      "word": "dagat",
+      "emoji": "🌊"
+    },
+    {
+      "word": "ilog",
+      "emoji": "🏞️"
+    },
+    {
+      "word": "bundok",
+      "emoji": "⛰️"
+    },
+    {
+      "word": "gubat",
+      "emoji": "🌳"
+    },
+    {
+      "word": "parke",
+      "emoji": "🏞️"
+    },
+    {
+      "word": "paaralan",
+      "emoji": "🏫"
+    },
+    {
+      "word": "guro",
+      "emoji": "👩‍🏫"
+    },
+    {
+      "word": "estudyante",
+      "emoji": "🎒"
+    },
+    {
+      "word": "aklat",
+      "emoji": "📚"
+    },
+    {
+      "word": "lapis",
+      "emoji": "✏️"
+    },
+    {
+      "word": "papel",
+      "emoji": "📄"
+    },
+    {
+      "word": "telepono",
+      "emoji": "📱"
+    },
+    {
+      "word": "telebisyon",
+      "emoji": "📺"
+    },
+    {
+      "word": "kompyuter",
+      "emoji": "💻"
+    },
+    {
+      "word": "orasan",
+      "emoji": "⏰"
+    },
+    {
+      "word": "araw",
+      "emoji": "☀️"
+    },
+    {
+      "word": "gabi",
+      "emoji": "🌙"
+    },
+    {
+      "word": "buwan",
+      "emoji": "🌕"
+    },
+    {
+      "word": "bituin",
+      "emoji": "⭐"
+    },
+    {
+      "word": "ulan",
+      "emoji": "🌧️"
+    },
+    {
+      "word": "hangin",
+      "emoji": "🌬️"
+    },
+    {
+      "word": "apoy",
+      "emoji": "🔥"
+    },
+    {
+      "word": "tubig",
+      "emoji": "💧"
+    },
+    {
+      "word": "sapatos",
+      "emoji": "👟"
+    },
+    {
+      "word": "damit",
+      "emoji": "👕"
+    },
+    {
+      "word": "payong",
+      "emoji": "☂️"
+    },
+    {
+      "word": "bag",
+      "emoji": "👜"
+    },
+    {
+      "word": "laruan",
+      "emoji": "🧸"
+    },
+    {
+      "word": "bola",
+      "emoji": "⚽"
+    },
+    {
+      "word": "laro",
+      "emoji": "🎮"
+    },
+    {
+      "word": "takbo",
+      "emoji": "🏃"
+    },
+    {
+      "word": "luto",
+      "emoji": "🍳"
+    },
+    {
+      "word": "kain",
+      "emoji": "🍽️"
+    },
+    {
+      "word": "inom",
+      "emoji": "🥤"
+    },
+    {
+      "word": "ligo",
+      "emoji": "🚿"
+    },
+    {
+      "word": "tulog",
+      "emoji": "😴"
+    },
+    {
+      "word": "gising",
+      "emoji": "🌅"
+    },
+    {
+      "word": "ngiti",
+      "emoji": "😊"
+    },
+    {
+      "word": "iyak",
+      "emoji": "😢"
+    },
+    {
+      "word": "halakhak",
+      "emoji": "😂"
+    },
+    {
+      "word": "sulat",
+      "emoji": "📝"
+    },
+    {
+      "word": "basa",
+      "emoji": "📖"
+    },
+    {
+      "word": "musika",
+      "emoji": "🎵"
+    },
+    {
+      "word": "sayaw",
+      "emoji": "💃"
+    },
+    {
+      "word": "kanta",
+      "emoji": "🎤"
+    },
+    {
+      "word": "gitara",
+      "emoji": "🎸"
+    },
+    {
+      "word": "tambol",
+      "emoji": "🥁"
+    },
+    {
+      "word": "telepono",
+      "emoji": "☎️"
+    },
+    {
+      "word": "radyo",
+      "emoji": "📻"
+    },
+    {
+      "word": "palengke",
+      "emoji": "🏬"
+    },
+    {
+      "word": "simbahan",
+      "emoji": "⛪"
+    },
+    {
+      "word": "ospital",
+      "emoji": "🏥"
+    },
+    {
+      "word": "police",
+      "emoji": "🚓"
+    },
+    {
+      "word": "pulis",
+      "emoji": "👮‍♂️"
+    },
+    {
+      "word": "bumbero",
+      "emoji": "🚒"
+    },
+    {
+      "word": "doktor",
+      "emoji": "🩺"
+    },
+    {
+      "word": "nars",
+      "emoji": "👩‍⚕️"
+    },
+    {
+      "word": "magsasaka",
+      "emoji": "🌾"
+    },
+    {
+      "word": "mangingisda",
+      "emoji": "🎣"
+    },
+    {
+      "word": "kaibigan",
+      "emoji": "🧑‍🤝‍🧑"
+    },
+    {
+      "word": "kapatid",
+      "emoji": "👫"
+    },
+    {
+      "word": "lolo",
+      "emoji": "👴"
+    },
+    {
+      "word": "lola",
+      "emoji": "👵"
+    },
+    {
+      "word": "bata",
+      "emoji": "👶"
+    },
+    {
+      "word": "kusina",
+      "emoji": "🍳"
+    },
+    {
+      "word": "paligo",
+      "emoji": "🛁"
+    },
+    {
+      "word": "banyo",
+      "emoji": "🚽"
+    },
+    {
+      "word": "puso",
+      "emoji": "❤️"
+    },
+    {
+      "word": "mata",
+      "emoji": "👀"
+    },
+    {
+      "word": "ilong",
+      "emoji": "👃"
+    },
+    {
+      "word": "tainga",
+      "emoji": "👂"
+    },
+    {
+      "word": "bibig",
+      "emoji": "👄"
+    },
+    {
+      "word": "kamay",
+      "emoji": "✋"
+    },
+    {
+      "word": "Basura",
+      "emoji": "🗑️"
+    }
   ]
 }

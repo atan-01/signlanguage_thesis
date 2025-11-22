@@ -162,6 +162,10 @@ function setupChartDropdown() {
     }
 }
 
+function dashboard() {
+    window.location.href = `${window.location.origin}/admin/dashboard`;
+}
+
 function profile(username) {
     window.location.href = `${window.location.origin}/profile/${username}`;
 }

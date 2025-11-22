@@ -19,6 +19,9 @@
                 {{ user.username }}
                 <div class="dropdown" id="profileMenu">
                     <button onclick="profile('{{ user.username }}')">Profile</button>
+                    {% if user.role == 'Admin' %}
+                        <button onclick="dashboard()">Dashboard</button>
+                    {% endif %}
                     <button id="logoutBtn" data-href="{{ url_for('auth.logout') }}"> Logout </button>
                 </div>
             </div>  

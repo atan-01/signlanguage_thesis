@@ -149,8 +149,7 @@ nav a:hover {
 #canvas {
   position: absolute;
   top: 0;
-  left: 50%;
-  transform: translateX(-50%) scaleX(-1);
+  transform: scaleX(-1);
   pointer-events: none;
   border-radius: 15px;
 }

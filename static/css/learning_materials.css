@@ -82,6 +82,29 @@ body {
     border-width: 11px;
 }
 
+.subcategory {
+    margin-bottom: 30px;
+}
+
+.subcategory-title {
+    font-family: "Gantari", sans-serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    margin: 0 20px;
+}
+
+.subcategory-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-start;
+    margin: 0 2vw;
+}
+
 body.words .class-btn {
     font-size: 0.9rem;  /* smaller text for words */
 }

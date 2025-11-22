@@ -179,6 +179,10 @@ function setupRoomSocketHandlers() {
         tryEnableStartGameButton();
     });
 
+    socketio.on('display_game_instruction', function(data) {
+        displayGameInstruction(data.imageName, data.gameType);
+    });
+
     socketio.on('start_game_countdown', function(){
         game_countdown.style.position = 'fixed';
         game_countdown.style.display = 'flex';
@@ -466,7 +470,67 @@ function handleConfirmButton() {
         learningMaterial: selectedLearningMaterial
     });
     
+    // instruction
+    showGameInstruction(selectedType);
+    
     return true;
+}
+
+function showGameInstruction(gameType) {
+    const instructionImages = {
+        'Timer Starts': 'timerstarts_instruction.png',
+        'Fill in the Blanks': 'fillintheblanks_instruction.png',
+        'Above or Below': 'aboveorbelow_instruction.png'
+    };
+    
+    const imageName = instructionImages[gameType];
+    
+    if (!imageName) {
+        console.error('No instruction image found for game type:', gameType);
+        return;
+    }
+    
+    socketio.emit('show_game_instruction', { 
+        imageName: imageName,
+        gameType: gameType 
+    });
+    
+    // show instruction to creatortoo
+    displayGameInstruction(imageName, gameType);
+}
+
+function displayGameInstruction(imageName, gameType) {
+    const instructionDiv = document.getElementById('gameinstruction');
+    
+    if (!instructionDiv) {
+        console.error('Game instruction div not found');
+        return;
+    }
+    
+    // Create instruction overlay
+    instructionDiv.innerHTML = `
+        <div class="instruction-overlay">
+            <div class="instruction-content">
+                <img src="/static/images/${imageName}" alt="${gameType} instruction" class="instruction-image">
+                <button class="instruction-close-btn" onclick="closeGameInstruction()">Got it!</button>
+            </div>
+        </div>
+    `;
+    
+    instructionDiv.style.display = 'block';
+    
+    // Auto-close after 10 seconds
+    setTimeout(() => {
+        closeGameInstruction();
+    }, 50000);
+}
+
+function closeGameInstruction() {
+    const instructionDiv = document.getElementById('gameinstruction');
+    if (instructionDiv) {
+        instructionDiv.style.display = 'none';
+        instructionDiv.innerHTML = '';
+    }
 }
 
 // Other room functions
@@ -483,9 +547,11 @@ btn_close.addEventListener('click', () => {
 });
 
 if (btn_confirm) {
+    
     btn_confirm.removeEventListener('click', handleConfirmButton); // Remove old listeners
     btn_confirm.addEventListener('click', handleConfirmButton); // Add new listener
 }
+
 function openGameModeOverlay() {
     if (window.isRoomCreator) {
         const overlay = document.getElementById('creator-participate');
@@ -591,8 +657,14 @@ function skip() {
         skipsRemaining--;
         updateSkipButton();
         
-        if (detector && detector.generateNewTarget) {
-            detector.generateNewTarget();
+        if (detector) {
+            if (detector.gameMode === 'time_starts') {
+                detector.generateNewTarget();
+            } else if (detector.gameMode === 'fill_blanks') {
+                detector.skipFillBlanks();
+            } else if (detector.gameMode === 'above_below') {
+                detector.skipAboveBelow();
+            }
         }
     }
 }

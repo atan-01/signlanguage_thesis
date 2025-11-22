@@ -23,6 +23,9 @@
                 {{ logged_in_user.username }}
                 <div class="dropdown" id="profileMenu">
                     <button onclick="profile('{{ logged_in_user.username }}')">Profile</button>
+                    {% if user.role == 'Admin' %}
+                        <button onclick="dashboard()">Dashboard</button>
+                    {% endif %}
                     <button id="logoutBtn" data-href="{{ url_for('auth.logout') }}"> Logout </button>
                 </div>
             </div>
@@ -35,7 +38,7 @@
             <div class="profile_details">
                 <span>{{ user.username }}</span>
                 <div class="grade_joined">
-                    {{ ("Grade: " ~ user.grade) if user.role == "Student" else "Teacher" }} • Joined: {{ user.created_at }}
+                    {{ ("Grade: " ~ user.grade) if user.role == "Student" else ("Teacher" if user.role == "Teacher" else "Admin") }} • Joined: {{ user.created_at }}
                 </div>
             </div>
             <div class="search">

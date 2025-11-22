@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gantari:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+</head>
+<body>
+    <div class="admin-container">
+        <header class="admin-header">
+            <div class="header-content">
+                <h1>Admin Dashboard</h1>
+                <div class="header-actions">
+                    <span class="admin-badge">{{ user.username }}</span>
+                    <a href="{{ url_for('home.home') }}" class="btn-back">← Back to Home</a>
+                </div>
+            </div>
+        </header>
+
+        <div class="admin-content">
+            <!-- Navigation Tabs -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="showTab('users')">👥 Users</button>
+                <button class="tab-btn" onclick="showTab('rooms')">🚪 Rooms</button>
+                <button class="tab-btn" onclick="showTab('sessions')">🎮 Game Sessions</button>
+                <button class="tab-btn" onclick="showTab('words')">📚 Words</button>
+            </div>
+
+            <!-- Users Tab -->
+            <div id="users-tab" class="tab-content active">
+                <div class="table-header">
+                    <h2>Users Management</h2>
+                    <button class="btn-add" onclick="showAddUserModal()">+ Add User</button>
+                </div>
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Role</th>
+                                <th>Grade</th>
+                                <th>Created At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-tbody">
+                            {% for user_item in users %}
+                            <tr data-id="{{ user_item.id }}">
+                                <td>{{ user_item.id }}</td>
+                                <td>{{ user_item.username }}</td>
+                                <td><span class="role-badge role-{{ user_item.role }}">{{ user_item.role }}</span></td>
+                                <td>{{ user_item.grade or 'N/A' }}</td>
+                                <td>{{ user_item.created_at[:10] }}</td>
+                                <td>
+                                    <button class="btn-edit" onclick="editUser('{{ user_item.id }}', '{{ user_item.username }}', '{{ user_item.role }}', '{{ user_item.grade }}')">Edit</button>
+                                    <button class="btn-delete" onclick="deleteUser('{{ user_item.id }}')">Delete</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Rooms Tab -->
+            <div id="rooms-tab" class="tab-content">
+                <div class="table-header">
+                    <h2>Rooms Management</h2>
+                </div>
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Room Code</th>
+                                <th>Creator ID</th>
+                                <th>Game Type</th>
+                                <th>Learning Material</th>
+                                <th>Duration</th>
+                                <th>Participants</th>
+                                <th>Created At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rooms-tbody">
+                            {% for room in rooms %}
+                            <tr data-id="{{ room.id }}">
+                                <td>{{ room.id }}</td>
+                                <td><strong>{{ room.room_code }}</strong></td>
+                                <td>{{ room.creator_id }}</td>
+                                <td>{{ room.game_type }}</td>
+                                <td>{{ room.learning_material or 'N/A' }}</td>
+                                <td>{{ room.duration }}s</td>
+                                <td>{{ room.total_participants }}</td>
+                                <td>{{ room.created_at[:10] }}</td>
+                                <td>
+                                    <button class="btn-delete" onclick="deleteRoom('{{ room.id }}')">Delete</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Game Sessions Tab -->
+            <div id="sessions-tab" class="tab-content">
+                <div class="table-header">
+                    <h2>Game Sessions Management</h2>
+                </div>
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>User ID</th>
+                                <th>Room ID</th>
+                                <th>Score</th>
+                                <th>Created At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sessions-tbody">
+                            {% for session in game_sessions %}
+                            <tr data-id="{{ session.id }}">
+                                <td>{{ session.id }}</td>
+                                <td>{{ session.user_id }}</td>
+                                <td>{{ session.room_id or 'N/A' }}</td>
+                                <td><strong>{{ session.score }}</strong></td>
+                                <td>{{ session.created_at[:10] }}</td>
+                                <td>
+                                    <button class="btn-delete" onclick="deleteGameSession('{{ session.id }}')">Delete</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Words Tab -->
+            <div id="words-tab" class="tab-content">
+                <div class="table-header">
+                    <h2>Words Management (Fill in the Blanks)</h2>
+                    <button class="btn-add" onclick="showAddWordModal()">+ Add Word</button>
+                </div>
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Word</th>
+                                <th>Emoji</th>
+                                <th>Preview</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="words-tbody">
+                            {% for word in words %}
+                            <tr data-index="{{ loop.index0 }}">
+                                <td>{{ loop.index }}</td>
+                                <td>{{ word.word }}</td>
+                                <td>{{ word.emoji }}</td>
+                                <td><span style="font-size: 2rem;">{{ word.emoji }}</span> {{ word.word }}</td>
+                                <td>
+                                    <button class="btn-edit" onclick="editWord({{ loop.index0 }}, '{{ word.word }}', '{{ word.emoji }}')">Edit</button>
+                                    <button class="btn-delete" onclick="deleteWord({{ loop.index0 }})">Delete</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Modal -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('userModal')">&times;</span>
+            <h2 id="userModalTitle">Add User</h2>
+            <form id="userForm" onsubmit="saveUser(event)">
+                <input type="hidden" id="userId" value="">
+                <div class="form-group">
+                    <label>Username:</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label>Role:</label>
+                    <select id="role" required>
+                        <option value="Teacher">Teacher</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Student">Student</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Grade:</label>
+                    <input type="text" id="grade">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeModal('userModal')">Cancel</button>
+                    <button type="submit" class="btn-save">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Word Modal -->
+    <div id="wordModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('wordModal')">&times;</span>
+            <h2 id="wordModalTitle">Add Word</h2>
+            <form id="wordForm" onsubmit="saveWord(event)">
+                <input type="hidden" id="wordIndex" value="">
+                <div class="form-group">
+                    <label>Word (Filipino):</label>
+                    <input type="text" id="wordText" required>
+                </div>
+                <div class="form-group">
+                    <label>Emoji:</label>
+                    <input type="text" id="wordEmoji" required placeholder="🐶">
+                    <small>Paste an emoji here</small>
+                </div>
+                <div class="form-group">
+                    <label>Preview:</label>
+                    <div class="word-preview">
+                        <span id="previewEmoji" style="font-size: 2rem;">🐶</span>
+                        <span id="previewWord">word</span>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeModal('wordModal')">Cancel</button>
+                    <button type="submit" class="btn-save">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/admin_dashboard.js') }}"></script>
+</body>
+</html>

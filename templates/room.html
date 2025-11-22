@@ -15,6 +15,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 </head>
 <body data-is-room-creator="{{ created|tojson }}">
+    <div id="gameinstruction"></div>
     <div id="game-countdown"></div>        <!-- overlay for countdown -->
     <div class="whole-body">
         <!-- left side of the page -->
@@ -46,7 +47,6 @@
                         </div>  
                     {% endif %}
                 </div>
-
             </div>
             <span class="room-messages-header"> 
                 <div class="rmh1"> ROOM </div>

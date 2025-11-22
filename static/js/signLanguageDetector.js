@@ -59,6 +59,7 @@ class SignLanguageDetector {
             this.currentBlankIndex = -1;
             this.currentTargetLetter = null;
             this.wordDisplay = '';
+            this.isAnimating = false;
             
             // Initialize based on game mode
             if (this.gameMode === 'time_starts') {
@@ -264,11 +265,19 @@ class SignLanguageDetector {
             
             if (this.elements.videoElement) {
                 this.elements.videoElement.srcObject = this.stream;
+                
+                // MIRROR THE VIDEO ELEMENT
+                this.elements.videoElement.style.transform = 'scaleX(-1)';
+                this.elements.videoElement.style.webkitTransform = 'scaleX(-1)';
 
                 this.elements.videoElement.onloadedmetadata = () => {
                     if (this.elements.canvas) {
                         this.elements.canvas.width = this.elements.videoElement.videoWidth;
                         this.elements.canvas.height = this.elements.videoElement.videoHeight;
+                        
+                        // MIRROR THE CANVAS TOO
+                        this.elements.canvas.style.transform = 'scaleX(-1)';
+                        this.elements.canvas.style.webkitTransform = 'scaleX(-1)';
                     }
 
                     this.captureCanvas.width = this.elements.videoElement.videoWidth;
@@ -537,18 +546,26 @@ class SignLanguageDetector {
         } 
         else if (this.gameMode === 'fill_blanks') {
             // Fill in the blanks game logic
-            if (prediction === this.currentTargetLetter && confidencePercent >= 50) {
+            if (prediction === this.currentTargetLetter && confidencePercent >= 20) {
                 this.holdCounter += 1;
             } else {
                 this.holdCounter = 0;
             }
 
             if (this.holdCounter >= 4) {
+                // Prevent multiple triggers
+                if (this.isAnimating) return;
+                this.isAnimating = true;
+                
                 this.score += 10;
                 this.holdCounter = 0;
                 
-                this.selectRandomWordWithBlank();
-                this.updateGameUI();
+                // Show the correct letter with animation, THEN change word
+                this.revealLetterWithAnimation().then(() => {
+                    this.selectRandomWordWithBlank();
+                    this.updateGameUI();
+                    this.isAnimating = false; // Allow next trigger
+                });
 
                 if (this.config.isRoomMode && this.socketio) {
                     this.socketio.emit('score_update', { score: this.score });
@@ -557,7 +574,7 @@ class SignLanguageDetector {
         }
         else if (this.gameMode === 'above_below') {
             // Above or Below game logic
-            if (prediction === this.aboveBelowData.target && confidencePercent >= 50) {
+            if (prediction === this.aboveBelowData.target && confidencePercent >= 20) {
                 this.holdCounter += 1;
             } else {
                 this.holdCounter = 0;
@@ -575,6 +592,70 @@ class SignLanguageDetector {
                 }
             }
         }
+    }
+
+    revealLetterWithAnimation() {
+        return new Promise((resolve) => {
+            if (!this.elements.targetElement) {
+                resolve();
+                return;
+            }
+
+            // Replace blank with actual letter
+            const revealedWord = this.currentWord.word.toUpperCase();
+            
+            // Create the HTML with the revealed letter having a special class
+            const wordArray = revealedWord.split('');
+            const styledWord = wordArray.map((letter, index) => {
+                if (index === this.currentBlankIndex) {
+                    return `<span class="revealed-letter">${letter}</span>`;
+                }
+                return letter;
+            }).join('');
+
+            // Update the display with revealed letter
+            this.elements.targetElement.innerHTML = `
+                <div style="display: flex; justify-content: center; align-items: center;">
+                    <div style="font-size: 1.5rem; margin-bottom: 10px; margin-right: 1rem">${this.currentWord.emoji}</div>
+                    <div style="font-size: 1rem; letter-spacing: 0.5rem; font-weight: bold;">${styledWord}</div>
+                </div>
+            `;
+
+            // Add CSS animation if not already added
+            if (!document.getElementById('fillBlanksAnimationStyles')) {
+                const style = document.createElement('style');
+                style.id = 'fillBlanksAnimationStyles';
+                style.textContent = `
+                    @keyframes letterReveal {
+                        0% { 
+                            transform: scale(1);
+                            color: inherit;
+                        }
+                        50% { 
+                            transform: scale(1.8);
+                            color: #4CAF50;
+                        }
+                        100% { 
+                            transform: scale(1);
+                            color: #4CAF50;
+                        }
+                    }
+                    
+                    .revealed-letter {
+                        display: inline-block;
+                        animation: letterReveal 0.6s ease-in-out;
+                        color: #4CAF50;
+                        font-weight: bold;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            // Wait for animation to complete (600ms) + 1 second pause
+            setTimeout(() => {
+                resolve(); // Just resolve, don't change word here
+            }, 1600); // 600ms animation + 1000ms pause
+        });
     }
 
 
@@ -683,6 +764,20 @@ class SignLanguageDetector {
         console.log(`New target generated: ${this.targetletter}`);
     }
 
+    skipFillBlanks() {
+        this.holdCounter = 0;
+        this.selectRandomWordWithBlank();
+        this.updateGameUI();
+        console.log(`Skipped to new word: ${this.currentWord.word}`);
+    }
+
+    skipAboveBelow() {
+        this.holdCounter = 0;
+        this.aboveBelowData = this.generateAboveBelowTarget();
+        this.updateGameUI();
+        console.log(`Skipped to new above/below target: ${this.aboveBelowData.target}`);
+    }
+
     formatLandmarksForDisplay(multiHandLandmarks) {
         const formattedLandmarks = [];
         
@@ -711,12 +806,14 @@ class SignLanguageDetector {
             return;
         }
         
+        // Clear the canvas
         this.ctx.clearRect(0, 0, this.elements.canvas.width, this.elements.canvas.height);
 
         landmarks.forEach(hand => {
             const points = hand.points;
             const connections = hand.connections;
 
+            // Draw connections (lines between landmarks)
             this.ctx.strokeStyle = '#00FF00';
             this.ctx.lineWidth = 2;
             this.ctx.beginPath();
@@ -736,6 +833,7 @@ class SignLanguageDetector {
 
             this.ctx.stroke();
 
+            // Draw landmarks (points)
             this.ctx.fillStyle = '#FF0000';
             points.forEach(point => {
                 const x = point[0] * this.elements.canvas.width;
@@ -887,7 +985,7 @@ class SignLanguageDetector {
         return this.learningTarget;
     }
 
-    setLearningThresholds(holdTime = 10, confidence = 50) {
+    setLearningThresholds(holdTime = 10, confidence = 20) {
         if (this.config.enableLearningMode) {
             this.learningSuccessThreshold = holdTime;
             this.learningConfidenceThreshold = confidence;

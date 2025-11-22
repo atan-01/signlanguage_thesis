@@ -40,9 +40,19 @@
                         </div>
                     {% endfor %}
                 {% elif category == 'words' %}
-                    {% for word in items %}
-                        <div class="learn-mats-buttons">
-                            <button class="class-btn" onclick="matcontent('{{ word.class }}', '{{ word.instruction}}', '{{ word.image_path}}', '{{ category.title() }}')">{{ word.class }}</button>
+                    {% for subcategory, words in items.items() %}
+                        <div class="subcategory">
+                            <h2 class="subcategory-title">
+                                {% if subcategory == 'Colors' %}🎨{% elif subcategory == 'Emotions' %}😊{% elif subcategory == 'Greetings & Question Words' %}❓{% elif subcategory == 'Family Members' %}👨‍👩‍👧‍👦{% elif subcategory == 'Objects' %}🍎{% endif %}
+                                {{ subcategory }}
+                            </h2>
+                            <div class="subcategory-items">
+                                {% for word in words %}
+                                    <div class="learn-mats-buttons">
+                                        <button class="class-btn" onclick="matcontent('{{ word.class }}', '{{ word.instruction}}', '{{ word.image_path}}', '{{ category.title() }}')">{{ word.class }}</button>
+                                    </div>
+                                {% endfor %}
+                            </div>
                         </div>
                     {% endfor %}
                 {% endif %}

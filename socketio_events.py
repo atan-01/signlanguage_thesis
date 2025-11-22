@@ -370,6 +370,16 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         if room and room in rooms:
             rooms[room]['creator_participated'] = data.get('participates', True)
 
+    @socketio.on('show_game_instruction')
+    def handle_show_game_instruction(data):
+        room = session.get('room')
+        if room:
+            # Broadcast to all participants in the room except sender
+            emit('display_game_instruction', {
+                'imageName': data['imageName'],
+                'gameType': data['gameType']
+            }, room=room, skip_sid=request.sid)
+
     @socketio.on("end_game")
     def handle_end_game(data=None):
         room = session.get('room')

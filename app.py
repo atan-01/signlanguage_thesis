@@ -9,6 +9,7 @@ from home import home_bp
 from room import room_bp
 from learn import learn_bp
 from user_profile import profile_bp
+from admin import admin_bp
 from socketio_events import init_all_socketio_events
 
 # Load environment variables
@@ -60,6 +61,7 @@ def create_app():
     app.register_blueprint(room_bp)
     app.register_blueprint(learn_bp)
     app.register_blueprint(profile_bp)
+    app.register_blueprint(admin_bp)
     
     initialize_fsl_model(app)
     

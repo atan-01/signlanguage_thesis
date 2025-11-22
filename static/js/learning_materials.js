@@ -132,67 +132,67 @@ function initializeFSLWordsSocket() {
     socketio.emit('get_supported_signs');
 }
 
-    function handleFSLPrediction(data) {
-        /*Handle FSL words predictions from server*/
+function handleFSLPrediction(data) {
+    /*Handle FSL words predictions from server*/
 
-        const predictionDiv = document.getElementById('prediction');
-        const confidenceDiv = document.getElementById('confidence');
-        const confidenceBar = document.getElementById('confidenceBar');
-        
-        if (!predictionDiv || !confidenceDiv || !confidenceBar) return;
-        
-        predictionDiv.textContent = data.prediction || 'No gesture';
-        
-        const confidencePercent = Math.round((data.confidence || 0) * 100);
-        confidenceDiv.textContent = confidencePercent + '%';
-        confidenceBar.style.width = confidencePercent + '%';
+    const predictionDiv = document.getElementById('prediction');
+    const confidenceDiv = document.getElementById('confidence');
+    const confidenceBar = document.getElementById('confidenceBar');
+    
+    if (!predictionDiv || !confidenceDiv || !confidenceBar) return;
+    
+    predictionDiv.textContent = data.prediction || 'No gesture';
+    
+    const confidencePercent = Math.round((data.confidence || 0) * 100);
+    confidenceDiv.textContent = confidencePercent + '%';
+    confidenceBar.style.width = confidencePercent + '%';
 
-        if (data.prediction && data.prediction.includes('Collecting')) {
-            // Still collecting motion
-            predictionDiv.style.color = '#FFA500';
-            predictionDiv.style.fontWeight = 'normal';
-            confidenceBar.style.background = 'linear-gradient(90deg, #FFA500, #FFD700)';
-            
-            fslSuccessShown = false;
-            
-        } else if (data.prediction === 'No hands detected') {
-            // No hands
-            predictionDiv.style.color = '#999';
-            predictionDiv.style.fontWeight = 'normal';
-            confidenceBar.style.background = '#e9ecef';
+    if (data.prediction && data.prediction.includes('Collecting')) {
+        // Still collecting motion
+        predictionDiv.style.color = '#FFA500';
+        predictionDiv.style.fontWeight = 'normal';
+        confidenceBar.style.background = 'linear-gradient(90deg, #FFA500, #FFD700)';
+        
+        fslSuccessShown = false;
+        
+    } else if (data.prediction === 'No hands detected') {
+        // No hands
+        predictionDiv.style.color = '#999';
+        predictionDiv.style.fontWeight = 'normal';
+        confidenceBar.style.background = '#e9ecef';
+        
+    } else {
+        const targetLower = currentclass ? currentclass.toLowerCase() : '';
+        const predictionLower = data.prediction ? data.prediction.toLowerCase() : '';
+        const isMatch = targetLower.includes(predictionLower) || predictionLower.includes(targetLower);
+        const hasConfidence = confidencePercent >= 25;
+        
+        if (isMatch && hasConfidence) {
+            // Correct gesture
+            predictionDiv.style.color = '#4CAF50';
+            predictionDiv.style.fontWeight = 'bold';
+            confidenceBar.style.background = 'linear-gradient(90deg, #4CAF50, #45a049)';
+
+            // Show success immediately
+            if (!fslSuccessShown) {
+                console.log('🎉 Showing success notification...');
+                showFSLSuccess();
+                fslSuccessShown = true;
+                
+                // Reset after 5 seconds
+                setTimeout(() => {
+                    fslSuccessShown = false;
+                    console.log('✨ Ready to show success again');
+                }, 5000);
+            }
             
         } else {
-            const targetLower = currentclass ? currentclass.toLowerCase() : '';
-            const predictionLower = data.prediction ? data.prediction.toLowerCase() : '';
-            const isMatch = targetLower.includes(predictionLower) || predictionLower.includes(targetLower);
-            const hasConfidence = confidencePercent >= 25;
-            
-            if (isMatch && hasConfidence) {
-                // Correct gesture
-                predictionDiv.style.color = '#4CAF50';
-                predictionDiv.style.fontWeight = 'bold';
-                confidenceBar.style.background = 'linear-gradient(90deg, #4CAF50, #45a049)';
-
-                // Show success immediately
-                if (!fslSuccessShown) {
-                    console.log('🎉 Showing success notification...');
-                    showFSLSuccess();
-                    fslSuccessShown = true;
-                    
-                    // Reset after 5 seconds
-                    setTimeout(() => {
-                        fslSuccessShown = false;
-                        console.log('✨ Ready to show success again');
-                    }, 5000);
-                }
-                
-            } else {
-                predictionDiv.style.color = '#007bff';
-                predictionDiv.style.fontWeight = 'normal';
-                confidenceBar.style.background = 'linear-gradient(90deg, #007bff, #0056b3)';
-            }
-        }        
-    }
+            predictionDiv.style.color = '#007bff';
+            predictionDiv.style.fontWeight = 'normal';
+            confidenceBar.style.background = 'linear-gradient(90deg, #007bff, #0056b3)';
+        }
+    }        
+}
 
 function showFSLSuccess() {
     const notification = document.createElement('div');

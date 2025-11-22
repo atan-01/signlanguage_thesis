@@ -38,18 +38,47 @@ def learn_category(category):
     if category not in valid_categories:
         return "Page not found", 404
 
-    # Query Supabase for items
     supabase = current_app.config['SUPABASE']
     try:
+        # Fixed: separate order() calls instead of comma-separated
         response = supabase.table("learning_materials") \
-            .select('"class", instruction, image_path') \
+            .select('class, instruction, image_path, subcategory') \
             .eq("category", category) \
+            .order("subcategory") \
             .order("class") \
             .execute()
-        items = [{"class": row["class"], "instruction": row["instruction"], "image_path": row["image_path"]} for row in response.data]
-        print(f"Fetched items for {category}: {items}")
+        
+        print(f"Raw response for {category}: {response.data}")  # Debug print
+        
+        if category == 'words':
+            # Group items by subcategory
+            subcategories = {}
+            for row in response.data:
+                subcat = row.get("subcategory", "Other")
+                if subcat not in subcategories:
+                    subcategories[subcat] = []
+                subcategories[subcat].append({
+                    "class": row["class"],
+                    "instruction": row["instruction"],
+                    "image_path": row["image_path"]
+                })
+            items = subcategories
+        else:
+            items = [
+                {
+                    "class": row["class"], 
+                    "instruction": row["instruction"], 
+                    "image_path": row["image_path"]
+                } 
+                for row in response.data
+            ]
+        
+        print(f"Processed items for {category}: {items}")  # Debug print
+        
     except Exception as e:
         print(f"Error fetching learning materials: {e}")
-        items = []
+        import traceback
+        traceback.print_exc()  # Print full error traceback
+        items = [] if category != 'words' else {}
 
     return render_template('learning_materials.html', category=category, items=items)
