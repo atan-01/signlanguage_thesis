@@ -180,7 +180,7 @@ function setupRoomSocketHandlers() {
     });
 
     socketio.on('display_game_instruction', function(data) {
-        displayGameInstruction(data.imageName, data.gameType);
+        displayGameInstruction(data.gameType);
     });
 
     socketio.on('start_game_countdown', function(){
@@ -477,29 +477,127 @@ function handleConfirmButton() {
 }
 
 function showGameInstruction(gameType) {
-    const instructionImages = {
-        'Timer Starts': 'timerstarts_instruction.png',
-        'Fill in the Blanks': 'fillintheblanks_instruction.png',
-        'Above or Below': 'aboveorbelow_instruction.png'
-    };
-    
-    const imageName = instructionImages[gameType];
-    
-    if (!imageName) {
-        console.error('No instruction image found for game type:', gameType);
-        return;
-    }
-    
+    // Broadcast to all participants
     socketio.emit('show_game_instruction', { 
-        imageName: imageName,
         gameType: gameType 
     });
     
-    // show instruction to creatortoo
-    displayGameInstruction(imageName, gameType);
+    // Show to creator too
+    displayGameInstruction(gameType);
 }
 
-function displayGameInstruction(imageName, gameType) {
+const gameInstructions = {
+    'Timer Starts': {
+        title: 'Timer Starts',
+        slides: [
+            {
+                title: 'Welcome to Timer Starts!',
+                content: 'A fast-paced sign language recognition game',
+                visual: 'intro',
+                icon: '⏱️'
+            },
+            {
+                title: 'Step 1: Look at the Target',
+                content: 'A letter or number will appear on screen',
+                visual: 'target',
+                example: 'A'
+            },
+            {
+                title: 'Step 2: Perform the Sign',
+                content: 'Show the sign language gesture in front of your camera',
+                visual: 'camera',
+                icon: '📹'
+            },
+            {
+                title: 'Step 3: Score Points!',
+                content: 'Correctly perform as many signs as you can before time runs out',
+                visual: 'score',
+                icon: '🎯'
+            },
+            {
+                title: 'Ready to Play?',
+                content: 'The game will start in a moment. Good luck!',
+                visual: 'ready',
+                icon: '🚀'
+            }
+        ]
+    },
+    'Fill in the Blanks': {
+        title: 'Fill in the Blanks',
+        slides: [
+            {
+                title: 'Welcome to Fill in the Blanks!',
+                content: 'Test your spelling skills with sign language',
+                visual: 'intro',
+                icon: '✍️'
+            },
+            {
+                title: 'Step 1: Read the Word',
+                content: 'A word with a missing letter will appear',
+                visual: 'word',
+                example: 'H O U _ E',
+                emoji: '🏠'
+            },
+            {
+                title: 'Step 2: Find the Missing Letter',
+                content: 'Identify which letter is missing from the word',
+                visual: 'missing',
+                highlight: 'S',
+                example: 'H O U S E'
+            },
+            {
+                title: 'Step 3: Sign the Letter',
+                content: 'Perform the missing letter in sign language',
+                visual: 'camera',
+                icon: '📹'
+            },
+            {
+                title: 'Step 4: Keep Going!',
+                content: 'Complete as many words as possible before time runs out',
+                visual: 'score',
+                icon: '🎯'
+            }
+        ]
+    },
+    'Above or Below': {
+        title: 'Above or Below',
+        slides: [
+            {
+                title: 'Welcome to Above or Below!',
+                content: 'A math puzzle game with sign language',
+                visual: 'intro',
+                icon: '🧮'
+            },
+            {
+                title: 'Step 1: Count the Arrows',
+                content: 'Look at the arrows next to the number or letter',
+                visual: 'arrows',
+                example: '← ← ← 5'
+            },
+            {
+                title: 'Step 2: Move and Count',
+                content: 'Move from the target according to arrow direction',
+                visual: 'calculate',
+                example: '← ← ← 5 = 2',
+                description: '(Go back 3 steps from 5)'
+            },
+            {
+                title: 'Step 3: Sign the Answer',
+                content: 'Perform the correct letter/number in sign language',
+                visual: 'camera',
+                icon: '📹'
+            },
+            {
+                title: 'Step 4: Beat the Clock!',
+                content: 'Solve as many as you can before time runs out',
+                visual: 'score',
+                icon: '🎯'
+            }
+        ]
+    }
+};
+
+function displayGameInstruction(gameType) {
     const instructionDiv = document.getElementById('gameinstruction');
     
     if (!instructionDiv) {
@@ -507,32 +605,272 @@ function displayGameInstruction(imageName, gameType) {
         return;
     }
     
-    // Create instruction overlay
+    const instructions = gameInstructions[gameType];
+    if (!instructions) {
+        console.error('No instructions found for game type:', gameType);
+        return;
+    }
+    
+    let currentSlide = 0;
+    
+    // Create the instruction overlay HTML
     instructionDiv.innerHTML = `
         <div class="instruction-overlay">
-            <div class="instruction-content">
-                <img src="/static/images/${imageName}" alt="${gameType} instruction" class="instruction-image">
-                <button class="instruction-close-btn" onclick="closeGameInstruction()">Got it!</button>
+            <div class="instruction-modal">
+                <div class="instruction-header">
+                    <h2>${instructions.title}</h2>
+                    <div class="slide-indicator">
+                        <span class="current-slide">1</span> / <span class="total-slides">${instructions.slides.length}</span>
+                    </div>
+                </div>
+                
+                <div class="instruction-slides-container">
+                    <button class="slide-nav-btn prev-btn" id="prev-slide">
+                        <span>‹</span>
+                    </button>
+                    
+                    <div class="instruction-slide-content" id="slide-content">
+                        <!-- Slide content will be inserted here -->
+                    </div>
+                    
+                    <button class="slide-nav-btn next-btn" id="next-slide">
+                        <span>›</span>
+                    </button>
+                </div>
+                
+                <div class="instruction-dots" id="instruction-dots">
+                    <!-- Dots will be inserted here -->
+                </div>
+                
+                <div class="instruction-footer">
+                    <button class="instruction-btn skip-btn" id="skip-instruction">Skip</button>
+                    <button class="instruction-btn start-btn" id="start-from-instruction" style="display: none;">Let's Play!</button>
+                </div>
             </div>
         </div>
     `;
     
     instructionDiv.style.display = 'block';
     
-    // Auto-close after 10 seconds
+    // Generate dots
+    const dotsContainer = document.getElementById('instruction-dots');
+    instructions.slides.forEach((_, index) => {
+        const dot = document.createElement('div');
+        dot.className = 'dot' + (index === 0 ? ' active' : '');
+        dot.addEventListener('click', () => goToSlide(index));
+        dotsContainer.appendChild(dot);
+    });
+    
+    // Function to render current slide
+    function renderSlide() {
+        const slide = instructions.slides[currentSlide];
+        const slideContent = document.getElementById('slide-content');
+        
+        slideContent.innerHTML = `
+            <div class="slide-visual ${slide.visual}">
+                ${generateVisual(slide)}
+            </div>
+            <div class="slide-text">
+                <h3>${slide.title}</h3>
+                <p>${slide.content}</p>
+                ${slide.description ? `<p class="slide-description">${slide.description}</p>` : ''}
+            </div>
+        `;
+        
+        // Update indicators
+        document.querySelector('.current-slide').textContent = currentSlide + 1;
+        
+        // Update dots
+        document.querySelectorAll('.dot').forEach((dot, index) => {
+            dot.classList.toggle('active', index === currentSlide);
+        });
+        
+        // Update navigation buttons
+        document.getElementById('prev-slide').style.visibility = 
+            currentSlide === 0 ? 'hidden' : 'visible';
+        
+        const nextBtn = document.getElementById('next-slide');
+        const skipBtn = document.getElementById('skip-instruction');
+        const startBtn = document.getElementById('start-from-instruction');
+        
+        if (currentSlide === instructions.slides.length - 1) {
+            nextBtn.style.display = 'none';
+            skipBtn.style.display = 'none';
+            startBtn.style.display = 'block';
+        } else {
+            nextBtn.style.display = 'flex';
+            skipBtn.style.display = 'block';
+            startBtn.style.display = 'none';
+        }
+        
+        // Add fade-in animation
+        slideContent.style.opacity = '0';
+        setTimeout(() => {
+            slideContent.style.opacity = '1';
+        }, 50);
+    }
+    
+    function generateVisual(slide) {
+        switch(slide.visual) {
+            case 'intro':
+                return `<div class="visual-icon mega">${slide.icon}</div>`;
+            
+            case 'target':
+                return `
+                    <div class="visual-target">
+                        <div class="target-box">
+                            <span class="target-letter-display">${slide.example}</span>
+                        </div>
+                        <div class="target-arrow">↓</div>
+                        <div class="target-label">Target Sign</div>
+                    </div>
+                `;
+            
+            case 'word':
+                return `
+                    <div class="visual-word">
+                        <div class="word-emoji">${slide.emoji}</div>
+                        <div class="word-letters">${slide.example}</div>
+                    </div>
+                `;
+            
+            case 'missing':
+                return `
+                    <div class="visual-missing">
+                        <div class="word-letters">
+                            ${slide.example.split(' ').map(letter => 
+                                letter === slide.highlight 
+                                    ? `<span class="highlight-letter">${letter}</span>`
+                                    : `<span>${letter}</span>`
+                            ).join(' ')}
+                        </div>
+                        <div class="missing-arrow">↑</div>
+                        <div class="missing-label">Missing Letter</div>
+                    </div>
+                `;
+            
+            case 'arrows':
+                return `
+                    <div class="visual-arrows">
+                        <div class="arrow-display">${slide.example}</div>
+                        <div class="arrow-explanation">Count and move!</div>
+                    </div>
+                `;
+            
+            case 'calculate':
+                return `
+                    <div class="visual-calculate">
+                        <div class="calc-display">${slide.example}</div>
+                        <div class="calc-steps">
+                            <div>5 → 4 → 3 → 2</div>
+                        </div>
+                    </div>
+                `;
+            
+            case 'camera':
+                return `
+                    <div class="visual-camera">
+                        <div class="camera-icon">${slide.icon}</div>
+                        <div class="camera-frame">
+                            <div class="hand-icon">✋</div>
+                        </div>
+                    </div>
+                `;
+            
+            case 'score':
+                return `
+                    <div class="visual-score">
+                        <div class="score-icon">${slide.icon}</div>
+                        <div class="score-display">
+                            <div class="score-number">+10</div>
+                            <div class="score-label">Points</div>
+                        </div>
+                    </div>
+                `;
+            
+            case 'ready':
+                return `
+                    <div class="visual-ready">
+                        <div class="ready-icon">${slide.icon}</div>
+                        <div class="ready-pulse"></div>
+                    </div>
+                `;
+            
+            default:
+                return `<div class="visual-icon">${slide.icon || '📋'}</div>`;
+        }
+    }
+    
+    function goToSlide(index) {
+        currentSlide = index;
+        renderSlide();
+    }
+    
+    function nextSlide() {
+        if (currentSlide < instructions.slides.length - 1) {
+            currentSlide++;
+            renderSlide();
+        }
+    }
+    
+    function prevSlide() {
+        if (currentSlide > 0) {
+            currentSlide--;
+            renderSlide();
+        }
+    }
+    
+    // Event listeners
+    document.getElementById('next-slide').addEventListener('click', nextSlide);
+    document.getElementById('prev-slide').addEventListener('click', prevSlide);
+    document.getElementById('skip-instruction').addEventListener('click', closeGameInstruction);
+    document.getElementById('start-from-instruction').addEventListener('click', closeGameInstruction);
+    
+    // Keyboard navigation
+    const handleKeyPress = (e) => {
+        if (e.key === 'ArrowRight') nextSlide();
+        if (e.key === 'ArrowLeft') prevSlide();
+        if (e.key === 'Escape') closeGameInstruction();
+    };
+    document.addEventListener('keydown', handleKeyPress);
+    
+    // Cleanup function
+    instructionDiv.dataset.keyHandler = 'attached';
+    instructionDiv.addEventListener('destroyed', () => {
+        document.removeEventListener('keydown', handleKeyPress);
+    });
+    
+    // Initial render
+    renderSlide();
+    
+    // Auto-close after 60 seconds if not manually closed
     setTimeout(() => {
-        closeGameInstruction();
-    }, 50000);
+        if (instructionDiv.style.display === 'block') {
+            closeGameInstruction();
+        }
+    }, 60000);
 }
 
 function closeGameInstruction() {
     const instructionDiv = document.getElementById('gameinstruction');
     if (instructionDiv) {
-        instructionDiv.style.display = 'none';
-        instructionDiv.innerHTML = '';
+        // Trigger cleanup
+        instructionDiv.dispatchEvent(new Event('destroyed'));
+        
+        // Fade out animation
+        const overlay = instructionDiv.querySelector('.instruction-overlay');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                instructionDiv.style.display = 'none';
+                instructionDiv.innerHTML = '';
+            }, 300);
+        } else {
+            instructionDiv.style.display = 'none';
+            instructionDiv.innerHTML = '';
+        }
     }
 }
-
 // Other room functions
 function openparticipants() {
     participants_container.style.display = 'flex';

@@ -376,7 +376,6 @@ def init_all_socketio_events(socketio, supabase, detector=None):
         if room:
             # Broadcast to all participants in the room except sender
             emit('display_game_instruction', {
-                'imageName': data['imageName'],
                 'gameType': data['gameType']
             }, room=room, skip_sid=request.sid)
 
